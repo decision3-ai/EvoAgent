@@ -1,0 +1,11 @@
+celery==5.4.0
+psycopg2-binary==2.9.10
+redis==5.2.1
+sqlalchemy[asyncio]==2.0.38
+asyncpg==0.30.0
+pydantic-settings==2.8.1
+python-dotenv==1.0.1
+langchain==0.3.20
+langgraph==0.2.74
+langchain-openai==0.3.8
+openai==1.65.4

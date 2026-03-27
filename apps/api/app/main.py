@@ -1,0 +1,49 @@
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+from app.core.database import engine, Base
+from app.workspaces.router import router as workspaces_router
+from app.chat.router import router as chat_router
+from app.agents.router import router as agents_router
+from app.evolution.router import router as evolution_router
+import app.agents.models  # noqa: F401 — registers models with SQLAlchemy metadata
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    await engine.dispose()
+
+
+app = FastAPI(
+    title='AgentEvo API',
+    description='AI Coding Partner — Single-agent workspace API',
+    version='0.2.0',
+    docs_url='/docs',
+    redoc_url='/redoc',
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
+
+app.include_router(workspaces_router, prefix='/api/v1/workspaces', tags=['workspaces'])
+app.include_router(chat_router, prefix='/api/v1/workspaces', tags=['chat'])
+app.include_router(agents_router, prefix='/api/v1/agents', tags=['agents'])
+app.include_router(evolution_router, prefix='/api/v1/evolution', tags=['evolution'])
+
+
+@app.get('/health', tags=['system'])
+async def health_check() -> dict:
+    return {'status': 'ok', 'service': 'agentevo-api', 'version': '0.2.0'}

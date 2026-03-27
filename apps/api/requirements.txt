@@ -1,0 +1,33 @@
+# Web framework
+fastapi==0.115.8
+uvicorn[standard]==0.34.0
+
+# Database
+sqlalchemy[asyncio]==2.0.38
+asyncpg==0.30.0
+alembic==1.14.1
+pgvector==0.3.6
+
+# Validation & settings
+pydantic==2.10.6
+pydantic-settings==2.8.1
+python-dotenv==1.0.1
+
+# Cache & queue
+redis==5.2.1
+celery==5.4.0
+
+# AI / Agent
+langchain==0.3.20
+langgraph==0.2.74
+langchain-openai==0.3.8
+langchain-anthropic==0.3.10
+openai==1.65.4
+anthropic==0.49.0
+
+# Auth
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.20
+
+# HTTP client
+httpx==0.28.1
