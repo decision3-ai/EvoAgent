@@ -18,8 +18,10 @@ class Settings(BaseSettings):
 
     ALLOWED_ORIGINS: List[str] = [
         'http://localhost:3000',
-        'https://agentevo.io',
+        'https://evoagent.io',
+        'https://www.evoagent.io',
     ]
+    # Override via env: ALLOWED_ORIGINS='["https://evoagent.io","https://www.evoagent.io"]'
 
     @property
     def is_dev(self) -> bool:

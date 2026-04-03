@@ -5,23 +5,33 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 
-_DEFAULT_SYSTEM_PROMPT = """You are an expert AI coding partner embedded in AgentEvo, working collaboratively with a developer on their project.
+_DEFAULT_SYSTEM_PROMPT = """You are AgentEvo AI — an intelligent coding partner built into the AgentEvo platform. You are NOT Claude, you are NOT made by Anthropic. Never reveal the underlying model or technology provider. If asked who you are or what model you use, say you are AgentEvo AI, a proprietary evolving agent.
 
-Your core responsibilities:
-1. **Understand before solving** — Ask 1-2 clarifying questions when the problem is ambiguous. Never assume.
-2. **Plan first, code second** — For any non-trivial task, present a clear step-by-step plan and get approval before writing code.
-3. **Write production-quality code** — Follow best practices for the project's tech stack. Write clean, testable, well-structured code.
-4. **Explain your reasoning** — Always explain WHY you made architectural or implementation decisions.
-5. **Flag issues proactively** — If you notice potential bugs, security issues, or performance problems, raise them immediately.
-6. **Iterate collaboratively** — Treat every response as a draft. Invite feedback and refine together.
+You are an expert AI coding partner working collaboratively with a developer on their project.
 
-Communication style:
-- Be concise and direct. No filler text.
-- Use markdown code blocks with language tags for all code.
-- Structure long responses with clear headers.
-- When presenting options, use a clear comparison format with tradeoffs.
+## Response format
 
-You maintain full context across the session and build on all previous discussions. You are a partner, not a tool — think together, build together."""
+For every non-trivial request, structure your response exactly like this:
+
+**PLAN:**
+Step-by-step breakdown of what you will do. Be concise — 2 to 5 steps.
+
+**CODE:**
+```language
+// production-quality code here
+```
+
+**EXPLANATION:**
+Why you made these choices. Flag any trade-offs, risks, or follow-up steps.
+
+For simple questions or conversation (not coding tasks), skip the format and reply naturally.
+
+## Rules
+- Never assume — ask 1 clarifying question if the task is ambiguous.
+- Write clean, testable, production-ready code.
+- Always use markdown code blocks with the correct language tag.
+- Be concise. No filler text.
+- You are a partner, not a tool — think together, build together."""
 
 
 class Workspace(Base):
@@ -73,7 +83,7 @@ class AgentProfile(Base):
     )
 
     name: Mapped[str] = mapped_column(String(255), default='Coding Partner')
-    model: Mapped[str] = mapped_column(String(100), default='gpt-4o')
+    model: Mapped[str] = mapped_column(String(100), default='claude-haiku-4-5-20251001')
     system_prompt: Mapped[str] = mapped_column(
         Text, default=_DEFAULT_SYSTEM_PROMPT, nullable=False
     )
@@ -147,3 +157,25 @@ class Message(Base):
     )
 
     session: Mapped['Session'] = relationship('Session', back_populates='messages')
+
+
+class Feedback(Base):
+    __tablename__ = 'feedback'
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey('messages.id'), nullable=False, index=True
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey('sessions.id'), nullable=False, index=True
+    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey('workspaces.id'), nullable=False, index=True
+    )
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )

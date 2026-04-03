@@ -17,7 +17,7 @@
 ## Project Structure
 
 ```
-AgentEvo-Claude/
+AgentEvo/
 ├── apps/
 │   ├── web/          # Next.js frontend
 │   ├── api/          # FastAPI backend

@@ -100,6 +100,21 @@ class MessageResponse(BaseModel):
     model_config = {'from_attributes': True}
 
 
+class FeedbackCreate(BaseModel):
+    score: int = Field(..., ge=1, le=5)
+
+
+class FeedbackResponse(BaseModel):
+    id: uuid.UUID
+    message_id: uuid.UUID
+    session_id: uuid.UUID
+    workspace_id: uuid.UUID
+    score: int
+    created_at: datetime
+
+    model_config = {'from_attributes': True}
+
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
 

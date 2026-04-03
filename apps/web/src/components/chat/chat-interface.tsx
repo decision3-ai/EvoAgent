@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNearWallet } from '@/contexts/near-wallet'
 import Link from 'next/link'
-import { createApiClient, type Workspace, type Session, type Message } from '@/lib/api-client'
+import { createApiClient, streamChat, type Workspace, type Session, type Message } from '@/lib/api-client'
 import { MessageBubble } from './message-bubble'
 
 type Props = {
@@ -50,9 +50,11 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [streamingContent, setStreamingContent] = useState('')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const userMsgAddedRef = useRef(false)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -60,7 +62,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, scrollToBottom])
+  }, [messages, streamingContent, scrollToBottom])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -71,36 +73,86 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
   }, [input])
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return
+    if (!input.trim() || loading || !accountId) return
 
     const text = input.trim()
     setInput('')
     setLoading(true)
+    setStreamingContent('')
+    userMsgAddedRef.current = false
 
     try {
-      if (!accountId) return
+      const response = await streamChat(accountId, workspace.id, sessionId, text)
 
-      const api = createApiClient(accountId)
-      const res = await api.post(
-        `/api/v1/workspaces/${workspace.id}/sessions/${sessionId}/chat`,
-        { message: text },
-      )
+      if (!response.ok || !response.body) throw new Error('Stream unavailable')
 
-      const { user_message, assistant_message, session_title } = res.data
-      setMessages((prev) => [...prev, user_message, assistant_message])
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
 
-      // Update session title in sidebar if it changed
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === sessionId
-            ? { ...s, title: session_title ?? s.title, message_count: s.message_count + 2 }
-            : s,
-        ),
-      )
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const event = JSON.parse(line.slice(6))
+
+            if (event.type === 'start') {
+              setMessages((prev) => [...prev, event.user_message])
+              userMsgAddedRef.current = true
+            } else if (event.type === 'token') {
+              setStreamingContent((prev) => prev + event.text)
+            } else if (event.type === 'done') {
+              setStreamingContent('')
+              setMessages((prev) => [...prev, event.assistant_message])
+              setSessions((prev) =>
+                prev.map((s) =>
+                  s.id === sessionId
+                    ? { ...s, title: event.session_title ?? s.title, message_count: s.message_count + 2 }
+                    : s,
+                ),
+              )
+            }
+          } catch {
+            // malformed event — skip
+          }
+        }
+      }
     } catch (err) {
-      console.error('Chat error:', err)
+      console.error('Stream error, falling back to sync:', err)
+      // Fallback: only add messages that were NOT already added via streaming
+      try {
+        const api = createApiClient(accountId)
+        const res = await api.post(
+          `/api/v1/workspaces/${workspace.id}/sessions/${sessionId}/chat`,
+          { message: text },
+        )
+        const { user_message, assistant_message, session_title } = res.data
+        setMessages((prev) => [
+          ...prev,
+          // Skip user_message if already added via stream's 'start' event
+          ...(userMsgAddedRef.current ? [] : [user_message]),
+          assistant_message,
+        ])
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === sessionId
+              ? { ...s, title: session_title ?? s.title, message_count: s.message_count + 2 }
+              : s,
+          ),
+        )
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr)
+      }
     } finally {
       setLoading(false)
+      setStreamingContent('')
       textareaRef.current?.focus()
     }
   }
@@ -110,6 +162,12 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
       e.preventDefault()
       sendMessage()
     }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Limit consecutive blank lines to 2 (keeps paste clean)
+    const cleaned = e.target.value.replace(/\n{3,}/g, '\n\n')
+    setInput(cleaned)
   }
 
   const createNewSession = async () => {
@@ -271,18 +329,29 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
                   A
                 </div>
                 <h2 className="text-xl font-semibold mb-2">
-                  Hey! I&apos;m your coding partner.
+                  {agentName} — ready to build
                 </h2>
-                <p className="text-gray-400 text-sm max-w-sm mx-auto">
-                  Tell me what you&apos;re building or what problem you&apos;re tackling.
-                  I&apos;ll help you understand it, plan it, and build it — together.
+                <p className="text-gray-400 text-sm max-w-sm mx-auto leading-relaxed">
+                  Working in{' '}
+                  <span className="text-white font-medium">{workspace.name}</span>
+                  {workspace.tech_stack.length > 0 && (
+                    <>
+                      {' '}·{' '}
+                      <span className="text-gray-500">
+                        {workspace.tech_stack.slice(0, 3).join(', ')}
+                      </span>
+                    </>
+                  )}
+                  . What are we building today?
                 </p>
                 <div className="mt-6 flex flex-wrap gap-2 justify-center">
                   {[
-                    'Help me understand this problem',
-                    'Break down a complex task',
-                    'Review my architecture',
-                    'Write a function for me',
+                    'Plan a new feature',
+                    'Debug this error',
+                    'Review my code',
+                    'Write a function',
+                    'Explain this concept',
+                    'Refactor this module',
                   ].map((prompt) => (
                     <button
                       key={prompt}
@@ -297,10 +366,27 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
             )}
 
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                workspaceId={workspace.id}
+                sessionId={sessionId}
+              />
             ))}
 
-            {loading && (
+            {streamingContent && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-violet-600 shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
+                  A
+                </div>
+                <div className="max-w-[78%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-gray-100">
+                  <span className="whitespace-pre-wrap">{streamingContent}</span>
+                  <span className="inline-block w-0.5 h-4 bg-sky-400 animate-pulse ml-0.5 align-middle" />
+                </div>
+              </div>
+            )}
+
+            {loading && !streamingContent && (
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-violet-600 shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
                   A
@@ -326,12 +412,18 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               <textarea
                 ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask your coding partner anything… (Enter to send, Shift+Enter for newline)"
+                placeholder={
+                  workspace.tech_stack.length > 0
+                    ? `Ask about ${workspace.tech_stack.slice(0, 2).join(', ')}, paste code, describe a task…`
+                    : 'Describe a task, paste code, or ask a question…'
+                }
                 className="flex-1 bg-transparent resize-none outline-none text-white placeholder-gray-500 text-sm leading-relaxed min-h-[24px] max-h-[200px]"
                 rows={1}
                 disabled={loading}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
               />
               <button
                 onClick={sendMessage}
@@ -339,13 +431,21 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
                 className="w-8 h-8 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0 shadow-lg shadow-sky-500/30"
                 aria-label="Send message"
               >
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                {loading ? (
+                  <span className="flex gap-0.5 items-center">
+                    <span className="w-1 h-1 rounded-full bg-white animate-bounce [animation-delay:-0.2s]" />
+                    <span className="w-1 h-1 rounded-full bg-white animate-bounce [animation-delay:-0.1s]" />
+                    <span className="w-1 h-1 rounded-full bg-white animate-bounce" />
+                  </span>
+                ) : (
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
               </button>
             </div>
             <p className="text-xs text-gray-600 text-center mt-2">
-              LangGraph pipeline connects in Sprint 3 — messages are saved end-to-end
+              ↵ Send &nbsp;·&nbsp; ⇧↵ New line
             </p>
           </div>
         </div>

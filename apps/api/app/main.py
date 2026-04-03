@@ -11,6 +11,7 @@ from app.chat.router import router as chat_router
 from app.agents.router import router as agents_router
 from app.evolution.router import router as evolution_router
 import app.agents.models  # noqa: F401 — registers models with SQLAlchemy metadata
+import app.workspaces.models  # noqa: F401 — registers Feedback and other workspace models
 
 
 @asynccontextmanager

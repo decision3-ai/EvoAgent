@@ -16,6 +16,7 @@ type NearWalletContextType = {
   accountId: string | null
   isConnected: boolean
   isLoading: boolean
+  wasSessionCleared: boolean
   connect: () => void
   disconnect: () => Promise<void>
 }
@@ -25,6 +26,7 @@ const NearWalletContext = createContext<NearWalletContextType>({
   accountId: null,
   isConnected: false,
   isLoading: true,
+  wasSessionCleared: false,
   connect: () => {},
   disconnect: async () => {},
 })
@@ -33,18 +35,25 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
   const [selector, setSelector] = useState<WalletSelector | null>(null)
   const [accountId, setAccountId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [wasSessionCleared, setWasSessionCleared] = useState(false)
 
   useEffect(() => {
     initWalletSelector()
-      .then((s) => {
+      .then(async (s) => {
         setSelector(s)
 
-        // Read current account from selector state
+        // Security: auto-disconnect previous session on every page load
         const { accounts } = s.store.getState()
         const active = accounts.find((a) => a.active)
         if (active) {
-          setAccountId(active.accountId)
-          document.cookie = `near_account_id=${active.accountId}; path=/; SameSite=Lax`
+          try {
+            const wallet = await s.wallet()
+            await wallet.signOut()
+          } catch (e) {
+            console.error('Auto-signout error:', e)
+          }
+          document.cookie = 'near_account_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          setWasSessionCleared(true)
         }
 
         // Subscribe to wallet state changes (connect / disconnect)
@@ -88,6 +97,7 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
         accountId,
         isConnected: !!accountId,
         isLoading,
+        wasSessionCleared,
         connect,
         disconnect,
       }}

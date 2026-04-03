@@ -27,21 +27,24 @@ class _Agent(_Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     fitness_score: Mapped[float] = mapped_column(Float, default=0.0)
-    interactions: Mapped[list['_Interaction']] = relationship(
-        '_Interaction', back_populates='agent'
-    )
 
 
-class _Interaction(_Base):
-    __tablename__ = 'interactions'
+class _AgentProfile(_Base):
+    """Workspace's agent profile — bridges agent_id to workspace_id for feedback lookup."""
+    __tablename__ = 'agent_profiles'
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    agent_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey('agents.id'), nullable=False
-    )
-    feedback_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
-    agent: Mapped['_Agent'] = relationship('_Agent', back_populates='interactions')
+
+class _Feedback(_Base):
+    __tablename__ = 'feedback'
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    message_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 def _make_engine():
@@ -79,11 +82,11 @@ def evolve_agent(self, agent_id: str) -> dict:
 @app.task(name='tasks.agent_tasks.compute_fitness', bind=True, max_retries=3)
 def compute_fitness(self, agent_id: str) -> dict:
     """
-    Compute fitness score for an agent from its interaction history.
+    Compute fitness score for an agent from user feedback.
 
-    Aggregates all Interaction.feedback_score values (1–5 scale;
-    thumbs up = 5, thumbs down = 1, null = ignored) and stores the
-    average as agent.fitness_score.
+    Looks up the AgentProfile for this agent's workspace, then aggregates
+    all Feedback.score values (1–5 scale; thumbs up = 5, thumbs down = 1)
+    for that workspace and stores the average as agent.fitness_score.
     """
     logger.info('[FitnessTask] Computing fitness for agent %s', agent_id)
     try:
@@ -96,10 +99,18 @@ def compute_fitness(self, agent_id: str) -> dict:
                 logger.warning('[FitnessTask] Agent %s not found', agent_id)
                 return {'agent_id': agent_id, 'fitness': None, 'status': 'not_found'}
 
+            # Resolve workspace_id via AgentProfile (one-to-one with Workspace)
+            profile = session.execute(
+                select(_AgentProfile).where(_AgentProfile.id == agent_uuid)
+            ).scalar_one_or_none()
+
+            if profile is None:
+                logger.warning('[FitnessTask] No AgentProfile for agent %s', agent_id)
+                return {'agent_id': agent_id, 'fitness': None, 'status': 'no_profile'}
+
             scores = session.execute(
-                select(_Interaction.feedback_score)
-                .where(_Interaction.agent_id == agent_uuid)
-                .where(_Interaction.feedback_score.is_not(None))
+                select(_Feedback.score)
+                .where(_Feedback.workspace_id == profile.workspace_id)
             ).scalars().all()
 
             if not scores:

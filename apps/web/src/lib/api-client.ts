@@ -73,6 +73,16 @@ export type ChatResponse = {
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
+export async function updateWorkspace(
+  token: string,
+  workspaceId: string,
+  data: { name?: string; description?: string | null; tech_stack?: string[] },
+): Promise<Workspace> {
+  const api = createApiClient(token)
+  const res = await api.patch<Workspace>(`/api/v1/workspaces/${workspaceId}`, data)
+  return res.data
+}
+
 export async function fetchWorkspaces(token: string): Promise<Workspace[]> {
   const api = createApiClient(token)
   const res = await api.get<Workspace[]>('/api/v1/workspaces/')
@@ -95,4 +105,34 @@ export async function fetchMessages(
     `/api/v1/workspaces/${workspaceId}/sessions/${sessionId}/messages`,
   )
   return res.data
+}
+
+export function streamChat(
+  token: string,
+  workspaceId: string,
+  sessionId: string,
+  message: string,
+): Promise<Response> {
+  return fetch(`${BASE_URL}/api/v1/workspaces/${workspaceId}/sessions/${sessionId}/chat/stream`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message }),
+  })
+}
+
+export async function submitFeedback(
+  token: string,
+  workspaceId: string,
+  sessionId: string,
+  messageId: string,
+  score: 1 | 5,
+): Promise<void> {
+  const api = createApiClient(token)
+  await api.post(
+    `/api/v1/workspaces/${workspaceId}/sessions/${sessionId}/messages/${messageId}/feedback`,
+    { score },
+  )
 }

@@ -1,14 +1,8 @@
 import type { NextConfig } from 'next'
 
+/** Standalone is for Docker/VPS; Vercel uses its own Next runtime. */
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/api/backend/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/:path*`,
-      },
-    ]
-  },
+  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
 }
 
 export default nextConfig

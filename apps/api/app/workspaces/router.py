@@ -7,7 +7,7 @@ from typing import List
 
 from app.core.database import get_db
 from app.core.auth import get_current_user_id
-from app.workspaces.models import Workspace, AgentProfile, Session, Message
+from app.workspaces.models import Workspace, AgentProfile, Session, Message, Feedback
 from app.workspaces.schemas import (
     WorkspaceCreate,
     WorkspaceUpdate,
@@ -18,6 +18,8 @@ from app.workspaces.schemas import (
     SessionUpdate,
     SessionResponse,
     MessageResponse,
+    FeedbackCreate,
+    FeedbackResponse,
 )
 
 router = APIRouter()
@@ -248,6 +250,45 @@ async def get_messages(
         .order_by(Message.created_at.asc())
     )
     return list(result.scalars().all())
+
+
+# ─── Feedback ─────────────────────────────────────────────────────────────────
+
+@router.post(
+    '/{workspace_id}/sessions/{session_id}/messages/{message_id}/feedback',
+    response_model=FeedbackResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def submit_feedback(
+    workspace_id: uuid.UUID,
+    session_id: uuid.UUID,
+    message_id: uuid.UUID,
+    payload: FeedbackCreate,
+    owner_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> Feedback:
+    await _get_owned_workspace(workspace_id, owner_id, db)
+    await _get_session(session_id, workspace_id, db)
+
+    result = await db.execute(
+        select(Message).where(
+            Message.id == message_id,
+            Message.session_id == session_id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail='Message not found')
+
+    feedback = Feedback(
+        message_id=message_id,
+        session_id=session_id,
+        workspace_id=workspace_id,
+        score=payload.score,
+    )
+    db.add(feedback)
+    await db.commit()
+    await db.refresh(feedback)
+    return feedback
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

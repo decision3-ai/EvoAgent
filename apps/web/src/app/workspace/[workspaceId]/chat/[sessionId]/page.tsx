@@ -55,7 +55,13 @@ export default function ChatPage() {
   if (!ready || !workspace) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-gray-400">Loading…</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-violet-600 animate-pulse shadow-lg shadow-sky-500/20" />
+          <div className="space-y-2 w-40">
+            <div className="h-2 rounded-full bg-white/10 animate-pulse" />
+            <div className="h-2 rounded-full bg-white/10 animate-pulse w-3/4 mx-auto" />
+          </div>
+        </div>
       </div>
     )
   }

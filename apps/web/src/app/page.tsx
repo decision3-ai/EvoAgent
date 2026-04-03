@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ConnectWalletButton } from '@/components/near/connect-wallet-button'
+import { SecurityToast } from '@/components/near/security-toast'
 
 const features = [
   {
@@ -44,6 +45,7 @@ const steps = [
 export default function Home() {
   return (
     <main className="min-h-screen bg-gray-950 text-white overflow-x-hidden">
+      <SecurityToast />
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-gray-950/80 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

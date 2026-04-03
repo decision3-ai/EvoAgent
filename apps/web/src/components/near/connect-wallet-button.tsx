@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNearWallet } from '@/contexts/near-wallet'
 
@@ -12,8 +12,14 @@ type Props = {
 export function ConnectWalletButton({ className = '', variant = 'primary' }: Props) {
   const { accountId, isConnected, isLoading, connect, disconnect } = useNearWallet()
   const router = useRouter()
+  const hasMounted = useRef(false)
 
   useEffect(() => {
+    // Skip on first mount — only redirect after user actively connects
+    if (!hasMounted.current) {
+      hasMounted.current = true
+      return
+    }
     if (isConnected && accountId) {
       router.push('/workspace')
     }
