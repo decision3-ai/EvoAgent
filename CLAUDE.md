@@ -8,6 +8,15 @@ SaaS coding partner platform. One core AI agent per workspace works with the use
 **Owner:** Victor  
 **Stage:** V1 pre-launch
 
+### Version ladder (product language)
+
+| Version | Codename | Meaning |
+|--------|----------|--------|
+| **V1** | **Evolution** | Shipped product: workspace → chat → plan/code/explain, SSE, settings, feedback captured. Evolution here means the agent improves through **conversation and context** with the user—not background genetic jobs. |
+| **V2** | **Fitness** | Background layer: formal scoring, workers, metrics, pipelines that turn feedback into measurable fitness (Celery, evolution plugin modules). |
+| **V3** | *TBD* | Reserved on the roadmap. |
+| **V4** | *TBD* | Reserved on the roadmap. |
+
 ---
 
 ## V1 Scope (IN)
@@ -28,7 +37,7 @@ settings affect agent behaviour
 - Chat with AI (streaming SSE)
 - Session management and history
 - PLAN / CODE / EXPLANATION response format
-- Feedback collection (thumbs up/down) — silent data for V2
+- Feedback collection (thumbs up/down) — stored for **V2 Fitness**
 - Code block copy, max-height scroll
 - Workspace create/edit UI
 - Production deployment (Vercel + VPS)
@@ -40,15 +49,15 @@ settings affect agent behaviour
 Do NOT build, refactor toward, or couple with:
 
 - Multi-agent system
-- Fitness / evolution engine
-- LangGraph orchestration pipeline
-- Celery fitness workers
+- Fitness **engine** (scoring pipeline, Celery workers) — **V2**
+- Automated genetic evolution jobs — **V2+**
+- LangGraph orchestration pipeline — **V2+**
 - NEAR smart contracts
 - Agent marketplace
 - Analytics dashboard
 - Clerk auth (not used — NEAR wallet only)
 
-These are **V2 plugin layer** — they plug in later without touching V1 core.
+These are **V2+** (Fitness and later waves) — they plug in later without touching V1 core.
 
 **Rule:** If the user doesn't directly see it → it's not V1 core.
 
@@ -56,17 +65,21 @@ These are **V2 plugin layer** — they plug in later without touching V1 core.
 
 ## Architecture Decision — Core vs Plugin
 
-### V1 CORE (user-facing execution)
+### V1 CORE — Evolution (user-facing execution)
 ```
 Task → Plan → Code → Explanation → Interaction
 ```
-Core modules: `workspaces/`, `chat/`
+Core modules: `workspaces/`, `chat/`  
+This is **V1 evolution**: iterative, in-session improvement—not the V2 fitness engine.
 
-### V2 PLUGIN LAYER (background, user never sees)
+### V2 PLUGIN LAYER — Fitness (background, user never sees)
 ```
-Feedback → Fitness → Evolution → Improved agent
+Feedback (from V1) → Fitness metrics → … → improved agent behaviour
 ```
-Plugin modules: `workers/`, `evolution/`
+Plugin modules: `workers/`, `evolution/` (when V2 ships).
+
+### V3 / V4
+Roadmap slots only—split features (marketplace, NEAR contracts, analytics, etc.) when you define them.
 
 **Hard rule:** Core does not import from Plugin. Plugin reads Core tables. No circular coupling.
 
@@ -141,11 +154,18 @@ docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
 
 | Service | Local | Production |
 |---|---|---|
-| Frontend | http://localhost:3000 | https://agentevo.io |
-| Backend API | http://localhost:8000 | https://api.agentevo.io |
-| API Docs | http://localhost:8000/docs | https://api.agentevo.io/docs |
+| Frontend | http://localhost:3000 | https://evoagent.io |
+| Backend API | http://localhost:8000 | https://api.evoagent.io |
+| API Docs | http://localhost:8000/docs | https://api.evoagent.io/docs |
 | PostgreSQL | localhost:5432 | managed / VPS |
 | Redis | localhost:6379 | managed / VPS |
+
+---
+
+## Git & deploy cadence
+
+- **Frontend (`apps/web` and anything that affects the Vercel build** — e.g. `pnpm-lock.yaml` when web deps change, `apps/web/vercel.json`, shared turbo config if the web build needs it): when a task changes these, **commit and push to GitHub immediately** after the change so **Vercel** can run a new deployment. Do not leave web-only fixes sitting local unless Victor says to wait.
+- **Backend (`apps/api`, `apps/workers`, Docker/VPS, nginx):** **no automatic push or deploy**—Victor decides when and how (Git push, rsync, `docker-compose`, migrations, etc.).
 
 ---
 
@@ -180,12 +200,16 @@ docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
 - [ ] End-to-end smoke test on production
 - [ ] Agents page → real API (low priority, not blocking)
 
-### V2 — Evolution Plugin Layer
+### V2 — Fitness layer
 - [ ] Celery fitness worker
-- [ ] LangGraph evolution pipeline
+- [ ] LangGraph evolution pipeline (background)
+- [ ] Formal fitness metrics surfaced from stored feedback
+
+### V3 / V4 — TBD
 - [ ] NEAR smart contracts for agent NFTs
 - [ ] Agent marketplace
-- [ ] Analytics dashboard
+- [ ] Analytics dashboard  
+*(Assign items to V3 vs V4 when the roadmap is fixed.)*
 
 ---
 
@@ -197,6 +221,7 @@ docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
 4. **No new libraries** unless strictly necessary
 5. **Core stays clean** — workspaces/ and chat/ must not depend on workers/ or evolution/
 6. **Always show** what file changed and why
+7. **Frontend deploy** — follow **Git & deploy cadence**: web changes → push to GitHub for Vercel; backend → only when agreed with Victor
 
 ---
 

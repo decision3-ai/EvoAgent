@@ -10,18 +10,18 @@ const features = [
   },
   {
     icon: '🧬',
-    title: 'Genetic Evolution',
-    desc: 'Agents improve through interaction feedback. The best traits survive and compound.',
+    title: 'Evolution (V1)',
+    desc: 'The agent tightens plans and code across the chat—context compounds so later turns stay aligned with your work.',
   },
   {
     icon: '📊',
-    title: 'Fitness Tracking',
-    desc: 'Real-time metrics on agent performance, generation history, and improvement velocity.',
+    title: 'Fitness (V2)',
+    desc: 'Formal scoring, generations, and velocity metrics—built on the feedback we already store. Shipping after V1.',
   },
   {
     icon: '🔗',
-    title: 'LangGraph Powered',
-    desc: 'Built on LangGraph for stateful, multi-step reasoning with full observability.',
+    title: 'Plan, Code & Explain',
+    desc: 'Structured answers with clear plan, copy-ready code blocks, and explanations—built for real shipping workflows.',
   },
   {
     icon: '🔒',
@@ -38,8 +38,16 @@ const features = [
 const steps = [
   { num: '01', title: 'Create', desc: 'Define your agent with a base model and initial system prompt.' },
   { num: '02', title: 'Interact', desc: 'Users chat with the agent. Every exchange is stored and analyzed.' },
-  { num: '03', title: 'Evaluate', desc: 'Feedback scores drive a fitness metric per agent and generation.' },
-  { num: '04', title: 'Evolve', desc: 'The LangGraph pipeline refines prompts and behavior automatically.' },
+  {
+    num: '03',
+    title: 'Evaluate',
+    desc: 'Thumbs and feedback are saved today; V2 Fitness turns that into measurable improvement.',
+  },
+  {
+    num: '04',
+    title: 'Evolve',
+    desc: 'V1 evolution: keep iterating in chat with full session context until the output fits your repo.',
+  },
 ]
 
 export default function Home() {
@@ -143,7 +151,7 @@ export default function Home() {
         <div className="text-center mb-14">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">The Evolution Loop</h2>
           <p className="text-gray-400 max-w-xl mx-auto">
-            Four steps. Continuous improvement. No manual intervention required.
+            V1 evolution loop today. V2 adds Fitness; V3 and V4 stay on the roadmap for what comes next.
           </p>
         </div>
 
@@ -189,7 +197,7 @@ export default function Home() {
             <div className="w-5 h-5 rounded bg-gradient-to-br from-sky-400 to-violet-600" />
             <span>AgentEvo.io</span>
           </div>
-          <p>© 2026 AgentEvo.io — Built with LangGraph, FastAPI & Next.js</p>
+          <p>© 2026 AgentEvo.io — Built by victordeflos</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-gray-300 transition-colors">Privacy</a>
             <a href="#" className="hover:text-gray-300 transition-colors">Terms</a>
