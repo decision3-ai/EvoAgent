@@ -11,14 +11,19 @@ import type { WalletSelector } from '@near-wallet-selector/core'
 import { setupModal } from '@near-wallet-selector/modal-ui'
 import { initWalletSelector, AGENTEVO_CONTRACT_ID } from '@/lib/near'
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+
 type NearWalletContextType = {
   selector: WalletSelector | null
   accountId: string | null
   isConnected: boolean
   isLoading: boolean
   wasSessionCleared: boolean
+  isEmailAuth: boolean
   connect: () => void
   disconnect: () => Promise<void>
+  loginWithEmail: (email: string, password: string) => Promise<void>
+  registerWithEmail: (email: string, password: string) => Promise<void>
 }
 
 const NearWalletContext = createContext<NearWalletContextType>({
@@ -27,8 +32,11 @@ const NearWalletContext = createContext<NearWalletContextType>({
   isConnected: false,
   isLoading: true,
   wasSessionCleared: false,
+  isEmailAuth: false,
   connect: () => {},
   disconnect: async () => {},
+  loginWithEmail: async () => {},
+  registerWithEmail: async () => {},
 })
 
 export function NearWalletProvider({ children }: { children: React.ReactNode }) {
@@ -36,6 +44,7 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
   const [accountId, setAccountId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [wasSessionCleared, setWasSessionCleared] = useState(false)
+  const [isEmailAuth, setIsEmailAuth] = useState(false)
 
   useEffect(() => {
     initWalletSelector()
@@ -79,6 +88,12 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
   }, [selector])
 
   const disconnect = useCallback(async () => {
+    if (isEmailAuth) {
+      setAccountId(null)
+      setIsEmailAuth(false)
+      localStorage.removeItem('email_auth_token')
+      return
+    }
     if (!selector) return
     try {
       const wallet = await selector.wallet()
@@ -88,7 +103,48 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
     }
     setAccountId(null)
     document.cookie = 'near_account_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-  }, [selector])
+  }, [selector, isEmailAuth])
+
+  const loginWithEmail = useCallback(async (email: string, password: string) => {
+    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.detail ?? 'Login failed')
+    }
+    const data = await res.json()
+    localStorage.setItem('email_auth_token', data.access_token)
+    setAccountId(data.access_token)
+    setIsEmailAuth(true)
+  }, [])
+
+  const registerWithEmail = useCallback(async (email: string, password: string) => {
+    const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.detail ?? 'Registration failed')
+    }
+    const data = await res.json()
+    localStorage.setItem('email_auth_token', data.access_token)
+    setAccountId(data.access_token)
+    setIsEmailAuth(true)
+  }, [])
+
+  // Restore email session on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('email_auth_token')
+    if (stored) {
+      setAccountId(stored)
+      setIsEmailAuth(true)
+    }
+  }, [])
 
   return (
     <NearWalletContext.Provider
@@ -98,8 +154,11 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
         isConnected: !!accountId,
         isLoading,
         wasSessionCleared,
+        isEmailAuth,
         connect,
         disconnect,
+        loginWithEmail,
+        registerWithEmail,
       }}
     >
       {children}
