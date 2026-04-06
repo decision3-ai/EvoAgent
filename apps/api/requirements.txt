@@ -5,6 +5,7 @@ uvicorn[standard]==0.34.0
 # Database
 sqlalchemy[asyncio]==2.0.38
 asyncpg==0.30.0
+psycopg2-binary==2.9.10
 alembic==1.14.1
 pgvector==0.3.6
 
@@ -27,6 +28,8 @@ anthropic==0.49.0
 
 # Auth
 python-jose[cryptography]==3.3.0
+bcrypt==4.2.1
+email-validator==2.2.0
 python-multipart==0.0.20
 
 # HTTP client
