@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNearWallet } from '@/contexts/near-wallet'
 
 type Mode = 'login' | 'register'
@@ -12,6 +13,8 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,8 +34,8 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  const modal = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-gray-900 border border-white/10 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
@@ -106,4 +109,7 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   )
+
+  if (!mounted) return null
+  return createPortal(modal, document.body)
 }
