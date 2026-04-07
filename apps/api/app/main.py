@@ -10,8 +10,10 @@ from app.workspaces.router import router as workspaces_router
 from app.chat.router import router as chat_router
 from app.agents.router import router as agents_router
 from app.evolution.router import router as evolution_router
+from app.auth.router import router as auth_router
 import app.agents.models  # noqa: F401 — registers models with SQLAlchemy metadata
 import app.workspaces.models  # noqa: F401 — registers Feedback and other workspace models
+import app.auth.models  # noqa: F401 — registers User model
 
 
 @asynccontextmanager
@@ -39,6 +41,7 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+app.include_router(auth_router, prefix='/api/v1', tags=['auth'])
 app.include_router(workspaces_router, prefix='/api/v1/workspaces', tags=['workspaces'])
 app.include_router(chat_router, prefix='/api/v1/workspaces', tags=['chat'])
 app.include_router(agents_router, prefix='/api/v1/agents', tags=['agents'])

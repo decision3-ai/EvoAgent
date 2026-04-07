@@ -276,7 +276,8 @@ async def submit_feedback(
             Message.session_id == session_id,
         )
     )
-    if result.scalar_one_or_none() is None:
+    msg = result.scalar_one_or_none()
+    if msg is None:
         raise HTTPException(status_code=404, detail='Message not found')
 
     feedback = Feedback(
@@ -286,6 +287,10 @@ async def submit_feedback(
         score=payload.score,
     )
     db.add(feedback)
+
+    # Fitness V2 phase 1: raw signed score (5=thumbs up → 1.0, 1=thumbs down → -1.0)
+    msg.fitness_score = 1.0 if payload.score == 5 else -1.0
+
     await db.commit()
     await db.refresh(feedback)
     return feedback

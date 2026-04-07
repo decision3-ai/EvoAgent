@@ -1,8 +1,6 @@
-import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import pool
+from sqlalchemy import pool, create_engine
 
 from alembic import context
 
@@ -10,6 +8,7 @@ from alembic import context
 from app.core.database import Base
 import app.agents.models  # noqa: F401
 import app.workspaces.models  # noqa: F401
+import app.auth.models  # noqa: F401
 
 config = context.config
 
@@ -20,6 +19,12 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
+    from app.core.config import settings
+    # App uses asyncpg; Alembic needs a synchronous driver (psycopg2)
+    return settings.DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql+psycopg2://')
+
+
+def get_async_url() -> str:
     from app.core.config import settings
     return settings.DATABASE_URL
 
@@ -46,15 +51,10 @@ def do_run_migrations(connection):
         context.run_migrations()
 
 
-async def run_async_migrations() -> None:
-    connectable = create_async_engine(get_url(), poolclass=pool.NullPool)
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-    await connectable.dispose()
-
-
 def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    connectable = create_engine(get_url(), poolclass=pool.NullPool)
+    with connectable.connect() as connection:
+        do_run_migrations(connection)
 
 
 if context.is_offline_mode():

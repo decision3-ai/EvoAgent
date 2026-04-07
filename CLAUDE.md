@@ -6,7 +6,7 @@ SaaS coding partner platform. One core AI agent per workspace works with the use
 
 **Tagline:** AI Agents That Learn and Evolve  
 **Owner:** Victor  
-**Stage:** V1 pre-launch
+**Stage:** V1 LIVE
 
 ### Version ladder (product language)
 
@@ -32,7 +32,7 @@ settings affect agent behaviour
 ```
 
 **Features included in V1:**
-- NEAR wallet auth (account_id as Bearer token)
+- Email/password auth (JWT)
 - Workspace CRUD + agent profile settings
 - Chat with AI (streaming SSE)
 - Session management and history
@@ -48,6 +48,7 @@ settings affect agent behaviour
 
 Do NOT build, refactor toward, or couple with:
 
+- NEAR wallet auth — dolazi u V2
 - Multi-agent system
 - Fitness **engine** (scoring pipeline, Celery workers) — **V2**
 - Automated genetic evolution jobs — **V2+**
@@ -90,7 +91,7 @@ Roadmap slots only—split features (marketplace, NEAR contracts, analytics, etc
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 15 (App Router) + TypeScript + Tailwind CSS |
-| Auth | NEAR wallet + Bearer token (account_id) |
+| Auth | Email/password (JWT) + NEAR wallet (V2) |
 | Backend API | FastAPI (Python 3.12) + SQLAlchemy async |
 | Database | PostgreSQL 16 + pgvector |
 | Cache / Queue | Redis 7 + Celery (workers only) |
@@ -182,7 +183,7 @@ docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
 ## V1 Roadmap — Current Status
 
 ### Done ✅
-- Auth (NEAR wallet + security re-login flow)
+- Auth (email/password JWT + parallel NEAR wallet support)
 - Workspace CRUD + agent profile settings
 - Workspace create/edit UI
 - Chat with AI (AgentEvo AI branding, no Claude/Anthropic mention)
@@ -196,20 +197,10 @@ docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
 - Deployment readiness (Dockerfile prod, standalone output, CORS)
 
 ### Remaining for V1 launch
-- [ ] Production deployment (Vercel + VPS)
 - [ ] End-to-end smoke test on production
 - [ ] Agents page → real API (low priority, not blocking)
 
-### V2 — Fitness layer
-- [ ] Celery fitness worker
-- [ ] LangGraph evolution pipeline (background)
-- [ ] Formal fitness metrics surfaced from stored feedback
-
-### V3 / V4 — TBD
-- [ ] NEAR smart contracts for agent NFTs
-- [ ] Agent marketplace
-- [ ] Analytics dashboard  
-*(Assign items to V3 vs V4 when the roadmap is fixed.)*
+V2+ roadmap je u ROADMAP.md
 
 ---
 

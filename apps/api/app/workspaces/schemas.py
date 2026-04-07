@@ -95,6 +95,7 @@ class MessageResponse(BaseModel):
     artifacts: List[Any]
     tokens_used: Optional[int]
     latency_ms: Optional[int]
+    fitness_score: Optional[float] = None
     created_at: datetime
 
     model_config = {'from_attributes': True}

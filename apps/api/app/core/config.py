@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ''
     ANTHROPIC_API_KEY: str = ''
 
+    JWT_SECRET_KEY: str = 'change-me-in-production'
+    JWT_ALGORITHM: str = 'HS256'
+    JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+
     ALLOWED_ORIGINS: List[str] = [
         'http://localhost:3000',
         'https://evoagent.io',

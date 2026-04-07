@@ -151,6 +151,7 @@ class Message(Base):
     artifacts: Mapped[list] = mapped_column(JSON, default=list)
     tokens_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fitness_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
