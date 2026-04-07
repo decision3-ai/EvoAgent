@@ -205,10 +205,10 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               href="/workspace"
               className="flex items-center gap-2 group"
             >
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-sky-400 to-violet-600 flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center font-bold text-xs shrink-0">
                 A
               </div>
-              <span className="font-semibold text-sm truncate group-hover:text-sky-400 transition-colors">
+              <span className="font-semibold text-sm truncate group-hover:text-fuchsia-400 transition-colors">
                 {workspace.name}
               </span>
             </Link>
@@ -261,7 +261,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               Agent settings
             </Link>
             <div className="flex items-center gap-2.5 px-3 py-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-sky-400 to-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
                 N
               </div>
               <span className="text-sm text-gray-500 truncate">
@@ -291,7 +291,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-sky-400 to-violet-600 flex items-center justify-center text-xs font-bold">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center text-xs font-bold">
                 A
               </div>
               <div>
@@ -325,7 +325,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
             {messages.length === 0 && (
               <div className="text-center pt-16">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-400 to-violet-600 flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-xl shadow-sky-500/20">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-xl shadow-fuchsia-500/20">
                   A
                 </div>
                 <h2 className="text-xl font-semibold mb-2">
@@ -356,7 +356,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
                     <button
                       key={prompt}
                       onClick={() => setInput(prompt)}
-                      className="text-xs bg-white/5 border border-white/10 hover:border-sky-500/30 hover:bg-sky-500/5 px-3 py-2 rounded-lg text-gray-400 hover:text-white transition-all"
+                      className="text-xs bg-white/5 border border-white/10 hover:border-fuchsia-500/30 hover:bg-fuchsia-500/5 px-3 py-2 rounded-lg text-gray-400 hover:text-white transition-all"
                     >
                       {prompt}
                     </button>
@@ -376,26 +376,26 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
             {streamingContent && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-violet-600 shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
                   A
                 </div>
                 <div className="max-w-[78%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-gray-100">
                   <span className="whitespace-pre-wrap">{streamingContent}</span>
-                  <span className="inline-block w-0.5 h-4 bg-sky-400 animate-pulse ml-0.5 align-middle" />
+                  <span className="inline-block w-0.5 h-4 bg-fuchsia-400 animate-pulse ml-0.5 align-middle" />
                 </div>
               </div>
             )}
 
             {loading && !streamingContent && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-violet-600 shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
                   A
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
                   <div className="flex gap-1 items-center h-5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-bounce" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-bounce" />
                   </div>
                 </div>
               </div>
@@ -408,7 +408,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
         {/* Input area */}
         <div className="shrink-0 border-t border-white/10 px-4 py-4">
           <div className="max-w-3xl mx-auto">
-            <div className="flex gap-3 items-end bg-white/5 border border-white/10 rounded-2xl px-4 py-3 focus-within:border-sky-500/40 focus-within:bg-white/[0.07] transition-all">
+            <div className="flex gap-3 items-end bg-white/5 border border-white/10 rounded-2xl px-4 py-3 focus-within:border-fuchsia-500/40 focus-within:bg-white/[0.07] transition-all">
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -428,7 +428,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               <button
                 onClick={sendMessage}
                 disabled={loading || !input.trim()}
-                className="w-8 h-8 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0 shadow-lg shadow-sky-500/30"
+                className="w-8 h-8 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0 shadow-lg shadow-fuchsia-500/30"
                 aria-label="Send message"
               >
                 {loading ? (

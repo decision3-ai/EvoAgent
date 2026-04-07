@@ -93,7 +93,7 @@ function renderRaw(content: string): React.ReactNode {
 }
 
 const SECTIONS = {
-  PLAN:        { label: 'Plan',        className: 'text-sky-400     border-sky-500/30     bg-sky-500/10'     },
+  PLAN:        { label: 'Plan',        className: 'text-fuchsia-400     border-fuchsia-500/30     bg-fuchsia-500/10'     },
   CODE:        { label: 'Code',        className: 'text-violet-400  border-violet-500/30  bg-violet-500/10'  },
   EXPLANATION: { label: 'Explanation', className: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
 } as const
@@ -186,8 +186,8 @@ export function MessageBubble({
       <div
         className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-sm font-bold mt-0.5 ${
           isUser
-            ? 'bg-sky-500/20 border border-sky-500/30 text-sky-400'
-            : 'bg-gradient-to-br from-sky-400 to-violet-600 text-white shadow-lg'
+            ? 'bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400'
+            : 'bg-gradient-to-br from-fuchsia-400 to-violet-600 text-white shadow-lg'
         }`}
       >
         {isUser ? 'Y' : 'A'}
@@ -207,7 +207,7 @@ export function MessageBubble({
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
             isUser
-              ? 'bg-sky-500/15 border border-sky-500/20 text-white rounded-tr-sm'
+              ? 'bg-fuchsia-500/15 border border-fuchsia-500/20 text-white rounded-tr-sm'
               : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm'
           }`}
         >

@@ -36,7 +36,7 @@ function SaveBar({ status, onSave, onCancel }: { status: SaveStatus; onSave: () 
       <button
         onClick={onSave}
         disabled={status === 'saving'}
-        className="bg-sky-500 hover:bg-sky-400 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-sky-500/25"
+        className="bg-fuchsia-500 hover:bg-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-fuchsia-500/25"
       >
         {status === 'saving' ? 'Saving…' : 'Save changes'}
       </button>
@@ -143,7 +143,7 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-violet-600 animate-pulse shadow-lg shadow-sky-500/20" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-violet-600 animate-pulse shadow-lg shadow-fuchsia-500/20" />
           <div className="space-y-2 w-40">
             <div className="h-2 rounded-full bg-white/10 animate-pulse" />
             <div className="h-2 rounded-full bg-white/10 animate-pulse w-3/4 mx-auto" />
@@ -183,7 +183,7 @@ export default function SettingsPage() {
                 type="text"
                 value={wsName}
                 onChange={(e) => setWsName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-sky-500/50 transition-colors"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-fuchsia-500/50 transition-colors"
               />
             </div>
 
@@ -197,7 +197,7 @@ export default function SettingsPage() {
                 onChange={(e) => setWsDescription(e.target.value)}
                 rows={2}
                 placeholder="What are you building?"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-sky-500/50 transition-colors resize-none text-sm"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-fuchsia-500/50 transition-colors resize-none text-sm"
               />
             </div>
 
@@ -216,7 +216,7 @@ export default function SettingsPage() {
                       onClick={() => toggleTech(tech)}
                       className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                         active
-                          ? 'bg-sky-500/20 border border-sky-500/50 text-sky-300'
+                          ? 'bg-fuchsia-500/20 border border-fuchsia-500/50 text-fuchsia-300'
                           : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
                       }`}
                     >
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                 type="text"
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-sky-500/50 transition-colors"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-fuchsia-500/50 transition-colors"
               />
             </div>
 
@@ -251,7 +251,7 @@ export default function SettingsPage() {
                     onClick={() => setModel(m.id)}
                     className={`text-left p-4 rounded-xl border transition-all ${
                       model === m.id
-                        ? 'border-sky-500/50 bg-sky-500/10'
+                        ? 'border-fuchsia-500/50 bg-fuchsia-500/10'
                         : 'border-white/10 bg-white/5 hover:border-white/20'
                     }`}
                   >
@@ -268,7 +268,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-sm font-medium mb-2">
                 Temperature —{' '}
-                <span className="text-sky-400 font-mono">{temperature.toFixed(1)}</span>
+                <span className="text-fuchsia-400 font-mono">{temperature.toFixed(1)}</span>
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 Lower = more focused. Higher = more creative.
@@ -277,7 +277,7 @@ export default function SettingsPage() {
                 type="range" min="0" max="1" step="0.1"
                 value={temperature}
                 onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                className="w-full accent-sky-500"
+                className="w-full accent-fuchsia-500"
               />
               <div className="flex justify-between text-xs text-gray-600 mt-1">
                 <span>Precise (0.0)</span>
@@ -294,7 +294,7 @@ export default function SettingsPage() {
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 rows={10}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:border-sky-500/50 transition-colors resize-none leading-relaxed"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:border-fuchsia-500/50 transition-colors resize-none leading-relaxed"
               />
             </div>
 

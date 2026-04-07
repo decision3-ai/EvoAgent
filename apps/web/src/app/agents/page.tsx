@@ -45,7 +45,7 @@ export default function AgentsPage() {
                 Your AI agents and their evolution status
               </p>
             </div>
-            <button className="bg-sky-500 hover:bg-sky-400 text-white px-5 py-2.5 rounded-lg font-medium transition-colors text-sm shadow-lg shadow-sky-500/20">
+            <button className="bg-fuchsia-500 hover:bg-fuchsia-400 text-white px-5 py-2.5 rounded-lg font-medium transition-colors text-sm shadow-lg shadow-fuchsia-500/20">
               + New Agent
             </button>
           </div>
@@ -57,7 +57,7 @@ export default function AgentsPage() {
                 key={filter}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   filter === 'All'
-                    ? 'bg-sky-500/15 text-sky-400'
+                    ? 'bg-fuchsia-500/15 text-fuchsia-400'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -76,7 +76,7 @@ export default function AgentsPage() {
             </p>
             <div className="mt-8 flex items-center justify-center gap-6 text-sm text-gray-500">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-sky-400" />
+                <span className="w-2 h-2 rounded-full bg-fuchsia-400" />
                 Generation tracking
               </div>
               <div className="flex items-center gap-1.5">

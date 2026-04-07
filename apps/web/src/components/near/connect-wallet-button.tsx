@@ -63,14 +63,14 @@ export function ConnectWalletButton({ className = '', variant = 'primary' }: Pro
         {/* Primary: email login */}
         <button
           onClick={() => setShowEmailModal(true)}
-          className={`flex items-center gap-2 bg-sky-500 hover:bg-sky-400 text-white px-4 py-2 rounded-lg transition-all font-medium text-sm shadow-lg shadow-sky-500/25 hover:-translate-y-0.5 ${variant === 'ghost' ? 'bg-transparent text-gray-400 hover:text-white shadow-none' : ''}`}
+          className={`flex items-center gap-2 bg-fuchsia-500 hover:bg-fuchsia-400 text-white px-4 py-2 rounded-lg transition-all font-medium text-sm shadow-lg shadow-fuchsia-500/25 hover:-translate-y-0.5 ${variant === 'ghost' ? 'bg-transparent text-gray-400 hover:text-white shadow-none' : ''}`}
         >
           Sign in
         </button>
 
         {/* NEAR wallet — coming in V2 */}
         <span className="text-xs text-gray-600 hidden sm:inline">
-          NEAR Wallet — <span className="text-sky-700">V2</span>
+          NEAR Wallet — <span className="text-fuchsia-700">V2</span>
         </span>
       </div>
     </>

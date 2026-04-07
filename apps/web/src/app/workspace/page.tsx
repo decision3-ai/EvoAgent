@@ -38,7 +38,7 @@ export default function WorkspacePage() {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-violet-600 animate-pulse shadow-lg shadow-sky-500/20" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-violet-600 animate-pulse shadow-lg shadow-fuchsia-500/20" />
           <div className="space-y-2 w-40">
             <div className="h-2 rounded-full bg-white/10 animate-pulse" />
             <div className="h-2 rounded-full bg-white/10 animate-pulse w-3/4 mx-auto" />
@@ -54,14 +54,14 @@ export default function WorkspacePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-violet-600 flex items-center justify-center font-bold shadow-lg">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center font-bold shadow-lg">
               A
             </div>
             <span className="font-semibold text-lg tracking-tight">AgentEvo.io</span>
           </div>
           <Link
             href="/workspace/new"
-            className="flex items-center gap-2 bg-sky-500 hover:bg-sky-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg shadow-sky-500/25 hover:-translate-y-0.5"
+            className="flex items-center gap-2 bg-fuchsia-500 hover:bg-fuchsia-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg shadow-fuchsia-500/25 hover:-translate-y-0.5"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -81,16 +81,16 @@ export default function WorkspacePage() {
             <Link
               key={ws.id}
               href={`/workspace/${ws.id}`}
-              className="group bg-white/5 border border-white/10 hover:border-sky-500/40 hover:bg-white/[0.07] rounded-2xl p-5 transition-all"
+              className="group bg-white/5 border border-white/10 hover:border-fuchsia-500/40 hover:bg-white/[0.07] rounded-2xl p-5 transition-all"
             >
               {/* Icon + name */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-violet-600 flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
                     {ws.name[0]?.toUpperCase() ?? 'W'}
                   </div>
                   <div>
-                    <h2 className="font-semibold text-sm group-hover:text-sky-300 transition-colors">
+                    <h2 className="font-semibold text-sm group-hover:text-fuchsia-300 transition-colors">
                       {ws.name}
                     </h2>
                     {ws.is_default && (
@@ -99,7 +99,7 @@ export default function WorkspacePage() {
                   </div>
                 </div>
                 <svg
-                  className="w-4 h-4 text-gray-600 group-hover:text-sky-400 transition-colors mt-0.5 shrink-0"
+                  className="w-4 h-4 text-gray-600 group-hover:text-fuchsia-400 transition-colors mt-0.5 shrink-0"
                   fill="none" viewBox="0 0 24 24" stroke="currentColor"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />

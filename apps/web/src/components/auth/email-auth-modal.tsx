@@ -55,7 +55,7 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-gray-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-sky-500 transition-colors"
+              className="w-full bg-gray-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-fuchsia-500 transition-colors"
               placeholder="you@example.com"
             />
           </div>
@@ -68,7 +68,7 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-gray-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-sky-500 transition-colors"
+              className="w-full bg-gray-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-fuchsia-500 transition-colors"
               placeholder={mode === 'register' ? 'Min. 8 characters' : '••••••••'}
             />
           </div>
@@ -82,7 +82,7 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-sky-500 hover:bg-sky-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors"
+            className="w-full bg-fuchsia-500 hover:bg-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors"
           >
             {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
@@ -92,7 +92,7 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
           {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
           <button
             onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null) }}
-            className="text-sky-400 hover:text-sky-300 transition-colors"
+            className="text-fuchsia-400 hover:text-fuchsia-300 transition-colors"
           >
             {mode === 'login' ? 'Register' : 'Sign in'}
           </button>
@@ -100,7 +100,7 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
 
         <div className="mt-6 pt-5 border-t border-white/10">
           <p className="text-center text-xs text-gray-600">
-            NEAR Wallet — <span className="text-sky-600">Coming in V2</span>
+            NEAR Wallet — <span className="text-fuchsia-600">Coming in V2</span>
           </p>
         </div>
       </div>

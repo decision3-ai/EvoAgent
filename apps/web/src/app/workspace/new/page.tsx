@@ -55,13 +55,13 @@ export default function NewWorkspacePage() {
     <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-4">
       {/* Background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-500/8 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-fuchsia-500/8 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-lg">
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-10">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-violet-600 flex items-center justify-center font-bold shadow-lg">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center font-bold shadow-lg">
             A
           </div>
           <span className="font-semibold text-xl tracking-tight">AgentEvo.io</span>
@@ -85,7 +85,7 @@ export default function NewWorkspacePage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. My SaaS Project"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/30 transition-colors"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-fuchsia-500/50 focus:ring-1 focus:ring-fuchsia-500/30 transition-colors"
               required
               autoFocus
             />
@@ -103,7 +103,7 @@ export default function NewWorkspacePage() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description of your project or goal…"
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/30 transition-colors resize-none"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-fuchsia-500/50 focus:ring-1 focus:ring-fuchsia-500/30 transition-colors resize-none"
             />
           </div>
 
@@ -123,7 +123,7 @@ export default function NewWorkspacePage() {
                     onClick={() => toggleStack(tech)}
                     className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                       active
-                        ? 'bg-sky-500/20 border border-sky-500/50 text-sky-300'
+                        ? 'bg-fuchsia-500/20 border border-fuchsia-500/50 text-fuchsia-300'
                         : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
                     }`}
                   >
@@ -143,7 +143,7 @@ export default function NewWorkspacePage() {
           <button
             type="submit"
             disabled={loading || !name.trim()}
-            className="w-full bg-sky-500 hover:bg-sky-400 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-sky-500/25 hover:-translate-y-0.5 disabled:hover:translate-y-0"
+            className="w-full bg-fuchsia-500 hover:bg-fuchsia-400 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-fuchsia-500/25 hover:-translate-y-0.5 disabled:hover:translate-y-0"
           >
             {loading ? 'Creating workspace…' : 'Create workspace & start building →'}
           </button>
