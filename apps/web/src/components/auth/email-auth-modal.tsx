@@ -35,8 +35,8 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
   }
 
   const modal = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-gray-900 border border-white/10 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl">
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 pt-16">
+      <div className="bg-gray-900 border border-white/10 rounded-2xl p-8 w-full max-w-md shadow-2xl my-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
             {mode === 'login' ? 'Sign in' : 'Create account'}
