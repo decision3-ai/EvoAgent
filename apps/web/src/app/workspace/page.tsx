@@ -54,8 +54,8 @@ export default function WorkspacePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center font-bold shadow-lg">
-              A
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center shadow-lg overflow-hidden">
+              <img src="/logo.png" alt="AgentEvo" className="w-7 h-7 object-contain" />
             </div>
             <span className="font-semibold text-lg tracking-tight">AgentEvo.io</span>
           </div>

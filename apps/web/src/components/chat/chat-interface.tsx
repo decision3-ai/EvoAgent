@@ -205,8 +205,8 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               href="/workspace"
               className="flex items-center gap-2 group"
             >
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center font-bold text-xs shrink-0">
-                A
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center shrink-0 overflow-hidden">
+                <img src="/logo.png" alt="AgentEvo" className="w-5 h-5 object-contain" />
               </div>
               <span className="font-semibold text-sm truncate group-hover:text-fuchsia-400 transition-colors">
                 {workspace.name}
@@ -291,8 +291,8 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center text-xs font-bold">
-                A
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center overflow-hidden">
+                <img src="/logo.png" alt="AgentEvo" className="w-5 h-5 object-contain" />
               </div>
               <div>
                 <span className="text-sm font-medium">{agentName}</span>
@@ -325,8 +325,8 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
             {messages.length === 0 && (
               <div className="text-center pt-16">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-xl shadow-fuchsia-500/20">
-                  A
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-fuchsia-500/20 overflow-hidden">
+                  <img src="/logo.png" alt="AgentEvo" className="w-12 h-12 object-contain" />
                 </div>
                 <h2 className="text-xl font-semibold mb-2">
                   {agentName} — ready to build
@@ -376,8 +376,8 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
             {streamingContent && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
-                  A
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden">
+                  <img src="/logo.png" alt="AgentEvo" className="w-6 h-6 object-contain" />
                 </div>
                 <div className="max-w-[78%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-gray-100">
                   <span className="whitespace-pre-wrap">{streamingContent}</span>
@@ -388,8 +388,8 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
             {loading && !streamingContent && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
-                  A
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden">
+                  <img src="/logo.png" alt="AgentEvo" className="w-6 h-6 object-contain" />
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
                   <div className="flex gap-1 items-center h-5">

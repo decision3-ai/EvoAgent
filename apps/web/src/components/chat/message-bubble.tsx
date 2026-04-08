@@ -183,15 +183,15 @@ export function MessageBubble({
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} group`}>
       {/* Avatar */}
-      <div
-        className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-sm font-bold mt-0.5 ${
-          isUser
-            ? 'bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400'
-            : 'bg-gradient-to-br from-fuchsia-400 to-violet-600 text-white shadow-lg'
-        }`}
-      >
-        {isUser ? 'Y' : 'A'}
-      </div>
+      {isUser ? (
+        <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-sm font-bold mt-0.5 bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400">
+          Y
+        </div>
+      ) : (
+        <div className="w-8 h-8 rounded-full shrink-0 mt-0.5 overflow-hidden shadow-lg bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center">
+          <img src="/logo.png" alt="AgentEvo" className="w-6 h-6 object-contain" />
+        </div>
+      )}
 
       {/* Bubble */}
       <div className={`max-w-[78%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
