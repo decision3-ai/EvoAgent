@@ -237,10 +237,10 @@ export function MessageBubble({
                 <button
                   onClick={() => handleFeedback(5)}
                   disabled={submitting || feedback !== null}
-                  className={`text-sm px-1.5 py-0.5 rounded transition-colors ${
+                  className={`text-sm px-1.5 py-0.5 rounded transition-colors cursor-pointer disabled:cursor-not-allowed ${
                     feedback === 5
                       ? 'text-green-400'
-                      : 'text-gray-600 hover:text-green-400 disabled:cursor-not-allowed'
+                      : 'text-gray-600 hover:text-green-400'
                   }`}
                   aria-label="Thumbs up"
                 >
@@ -249,10 +249,10 @@ export function MessageBubble({
                 <button
                   onClick={() => handleFeedback(1)}
                   disabled={submitting || feedback !== null}
-                  className={`text-sm px-1.5 py-0.5 rounded transition-colors ${
+                  className={`text-sm px-1.5 py-0.5 rounded transition-colors cursor-pointer disabled:cursor-not-allowed ${
                     feedback === 1
                       ? 'text-red-400'
-                      : 'text-gray-600 hover:text-red-400 disabled:cursor-not-allowed'
+                      : 'text-gray-600 hover:text-red-400'
                   }`}
                   aria-label="Thumbs down"
                 >
