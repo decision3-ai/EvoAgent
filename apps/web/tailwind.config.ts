@@ -9,6 +9,26 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Override fuchsia → orange palette
+        fuchsia: {
+          300: '#ffcc55',
+          400: '#ffaa00',
+          500: '#ff6a00',
+          600: '#e05500',
+          700: '#cc4400',
+        },
+        // Override violet → deep blue palette
+        violet: {
+          500: '#3a2fad',
+          600: '#2a1f9d',
+          700: '#1a0f8d',
+        },
+        // Override dark grays → dark blue palette
+        gray: {
+          800: '#111840',
+          900: '#0d1235',
+          950: '#0a0f2e',
+        },
         brand: {
           50: '#f0f9ff',
           100: '#e0f2fe',

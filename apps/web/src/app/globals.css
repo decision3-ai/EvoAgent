@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --background: 222 47% 5%;
+    --background: 231 64% 11%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 8%;
+    --card: 231 55% 13%;
     --card-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --border: 231 40% 20%;
+    --muted: 231 40% 20%;
+    --muted-foreground: 231 20% 65%;
   }
 
   * {
@@ -38,6 +38,6 @@
   }
 
   .glow-sky {
-    box-shadow: 0 0 40px -10px rgba(217, 70, 239, 0.5);
+    box-shadow: 0 0 40px -10px rgba(255, 106, 0, 0.5);
   }
 }
