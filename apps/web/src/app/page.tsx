@@ -57,10 +57,8 @@ export default function Home() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-gray-950/80 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center shadow-lg overflow-hidden">
-              <img src="/logo.png" alt="AgentEvo" className="w-6 h-6 object-contain" />
-            </div>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="AgentEvo logo" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_rgba(255,106,0,0.5)]" />
             <span className="font-semibold text-lg tracking-tight">AgentEvo.io</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">

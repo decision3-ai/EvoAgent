@@ -291,9 +291,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center overflow-hidden">
-                <img src="/logo.png" alt="AgentEvo" className="w-5 h-5 object-contain" />
-              </div>
+              <img src="/logo.png" alt="AgentEvo" className="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(255,106,0,0.4)]" />
               <div>
                 <span className="text-sm font-medium">{agentName}</span>
                 <span className="ml-2 text-xs text-gray-500 font-mono">{agentModel}</span>

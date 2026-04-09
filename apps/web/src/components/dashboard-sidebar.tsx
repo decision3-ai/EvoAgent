@@ -19,10 +19,8 @@ export function DashboardSidebar() {
   return (
     <aside className="w-56 border-r border-white/10 flex flex-col py-6 px-4 shrink-0 h-screen sticky top-0">
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 mb-8 px-2 group">
-        <div className="w-7 h-7 rounded-md bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center shadow-lg group-hover:shadow-fuchsia-500/30 transition-shadow overflow-hidden">
-          <img src="/logo.png" alt="AgentEvo" className="w-5 h-5 object-contain" />
-        </div>
+      <Link href="/" className="flex items-center gap-2.5 mb-8 px-2 group">
+        <img src="/logo.png" alt="AgentEvo" className="h-8 w-8 object-contain drop-shadow-[0_0_6px_rgba(255,106,0,0.4)] group-hover:drop-shadow-[0_0_10px_rgba(255,106,0,0.6)] transition-all" />
         <span className="font-semibold tracking-tight">AgentEvo</span>
       </Link>
 
