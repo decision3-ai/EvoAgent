@@ -1,3 +1,5 @@
+import { BrandIcon } from '@/components/brand-icon'
+
 export default function AuthLayout({
   children,
 }: {
@@ -12,12 +14,8 @@ export default function AuthLayout({
       <div className="relative z-10 w-full flex flex-col items-center gap-8 px-4">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center shadow-lg overflow-hidden">
-            <img src="/logo.png" alt="AgentEvo" className="w-7 h-7 object-contain" />
-          </div>
-          <span className="font-semibold text-xl text-white tracking-tight">
-            AgentEvo.io
-          </span>
+          <BrandIcon className="h-9 w-9 rounded-xl text-sm shadow-lg" />
+          <span className="font-semibold text-xl text-white tracking-tight">EVOAGENT</span>
         </a>
 
         {children}

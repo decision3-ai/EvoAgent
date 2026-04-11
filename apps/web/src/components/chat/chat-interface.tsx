@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useNearWallet } from '@/contexts/near-wallet'
 import Link from 'next/link'
 import { createApiClient, streamChat, type Workspace, type Session, type Message } from '@/lib/api-client'
+import { BrandIcon } from '@/components/brand-icon'
 import { MessageBubble } from './message-bubble'
 
 type Props = {
@@ -205,9 +206,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               href="/workspace"
               className="flex items-center gap-2 group"
             >
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center shrink-0 overflow-hidden">
-                <img src="/logo.png" alt="AgentEvo" className="w-5 h-5 object-contain" />
-              </div>
+              <BrandIcon className="h-6 w-6 rounded-md text-[0.65rem]" />
               <span className="font-semibold text-sm truncate group-hover:text-fuchsia-400 transition-colors">
                 {workspace.name}
               </span>
@@ -291,7 +290,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="AgentEvo" className="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(255,106,0,0.4)]" />
+              <BrandIcon className="h-8 w-8 rounded-full text-xs drop-shadow-[0_0_6px_rgba(255,106,0,0.4)]" />
               <div>
                 <span className="text-sm font-medium">{agentName}</span>
                 <span className="ml-2 text-xs text-gray-500 font-mono">{agentModel}</span>
@@ -323,9 +322,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
             {messages.length === 0 && (
               <div className="text-center pt-16">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-fuchsia-500/20 overflow-hidden">
-                  <img src="/logo.png" alt="AgentEvo" className="w-12 h-12 object-contain" />
-                </div>
+                <BrandIcon className="mx-auto mb-4 h-16 w-16 rounded-2xl text-lg shadow-xl shadow-fuchsia-500/20" />
                 <h2 className="text-xl font-semibold mb-2">
                   {agentName} — ready to build
                 </h2>
@@ -374,9 +371,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
             {streamingContent && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden">
-                  <img src="/logo.png" alt="AgentEvo" className="w-6 h-6 object-contain" />
-                </div>
+                <BrandIcon className="mt-0.5 h-8 w-8 shrink-0 rounded-full text-xs" />
                 <div className="max-w-[78%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-gray-100">
                   <span className="whitespace-pre-wrap">{streamingContent}</span>
                   <span className="inline-block w-0.5 h-4 bg-fuchsia-400 animate-pulse ml-0.5 align-middle" />
@@ -386,9 +381,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
             {loading && !streamingContent && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden">
-                  <img src="/logo.png" alt="AgentEvo" className="w-6 h-6 object-contain" />
-                </div>
+                <BrandIcon className="mt-0.5 h-8 w-8 shrink-0 rounded-full text-xs" />
                 <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
                   <div className="flex gap-1 items-center h-5">
                     <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-bounce [animation-delay:-0.3s]" />

@@ -15,16 +15,16 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'AgentEvo.io — AI Agents That Evolve',
+  title: 'EVOAGENT — AI Agents That Evolve',
   description:
     'Build, deploy, and evolve AI agents that grow smarter with every interaction. No static prompts. Just continuous evolution.',
   keywords: ['AI agents', 'NEAR blockchain', 'Web3', 'agent evolution'],
-  authors: [{ name: 'AgentEvo Team' }],
+  authors: [{ name: 'EVOAGENT' }],
   openGraph: {
-    title: 'AgentEvo.io',
+    title: 'EVOAGENT',
     description: 'AI Agents That Learn and Evolve',
     type: 'website',
-    url: 'https://agentevo.io',
+    url: 'https://evoagent.io',
   },
 }
 

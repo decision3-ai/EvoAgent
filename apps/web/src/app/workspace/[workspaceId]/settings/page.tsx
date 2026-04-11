@@ -13,10 +13,10 @@ const TECH_OPTIONS = [
 ]
 
 const MODELS = [
-  { id: 'claude-haiku-4-5-20251001', label: 'AgentEvo Fast',     provider: 'v1', desc: 'Fastest responses, ideal for everyday coding tasks' },
-  { id: 'claude-sonnet-4-5-20250929', label: 'AgentEvo Balanced', provider: 'v2', desc: 'Best balance of speed and reasoning quality' },
-  { id: 'claude-sonnet-4-6',          label: 'AgentEvo Pro',      provider: 'v3', desc: 'Latest model, highest quality responses' },
-  { id: 'claude-opus-4-5-20251101',   label: 'AgentEvo Max',      provider: 'v4', desc: 'Most powerful, best for complex architecture tasks' },
+  { id: 'claude-haiku-4-5-20251001', label: 'EVOAGENT Fast',     provider: 'v1', desc: 'Fastest responses, ideal for everyday coding tasks' },
+  { id: 'claude-sonnet-4-5-20250929', label: 'EVOAGENT Balanced', provider: 'v2', desc: 'Best balance of speed and reasoning quality' },
+  { id: 'claude-sonnet-4-6',          label: 'EVOAGENT Pro',      provider: 'v3', desc: 'Latest model, highest quality responses' },
+  { id: 'claude-opus-4-5-20251101',   label: 'EVOAGENT Max',      provider: 'v4', desc: 'Most powerful, best for complex architecture tasks' },
 ]
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'

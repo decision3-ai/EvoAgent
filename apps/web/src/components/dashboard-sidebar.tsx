@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { BrandIcon } from '@/components/brand-icon'
 import { usePathname } from 'next/navigation'
 import { useNearWallet } from '@/contexts/near-wallet'
 
@@ -20,8 +21,8 @@ export function DashboardSidebar() {
     <aside className="w-56 border-r border-white/10 flex flex-col py-6 px-4 shrink-0 h-screen sticky top-0">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 mb-8 px-2 group">
-        <img src="/logo.png" alt="AgentEvo" className="h-8 w-8 object-contain drop-shadow-[0_0_6px_rgba(255,106,0,0.4)] group-hover:drop-shadow-[0_0_10px_rgba(255,106,0,0.6)] transition-all" />
-        <span className="font-semibold tracking-tight">AgentEvo</span>
+        <BrandIcon className="h-8 w-8 rounded-lg text-xs drop-shadow-[0_0_6px_rgba(255,106,0,0.4)] group-hover:drop-shadow-[0_0_10px_rgba(255,106,0,0.6)] transition-all" />
+        <span className="font-semibold tracking-tight">EVOAGENT</span>
       </Link>
 
       {/* Nav */}

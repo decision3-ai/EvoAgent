@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { BrandIcon } from '@/components/brand-icon'
 import { useNearWallet } from '@/contexts/near-wallet'
 import { submitFeedback } from '@/lib/api-client'
 import type { Message } from '@/lib/api-client'
@@ -188,9 +189,7 @@ export function MessageBubble({
           Y
         </div>
       ) : (
-        <div className="w-8 h-8 rounded-full shrink-0 mt-0.5 overflow-hidden shadow-lg bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center">
-          <img src="/logo.png" alt="AgentEvo" className="w-6 h-6 object-contain" />
-        </div>
+        <BrandIcon className="mt-0.5 h-8 w-8 shrink-0 rounded-full text-xs shadow-lg" />
       )}
 
       {/* Bubble */}

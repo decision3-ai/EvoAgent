@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { BrandIcon } from '@/components/brand-icon'
 import { useNearWallet } from '@/contexts/near-wallet'
 import { createApiClient } from '@/lib/api-client'
 
@@ -61,10 +62,8 @@ export default function NewWorkspacePage() {
       <div className="relative w-full max-w-lg">
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-10">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center shadow-lg overflow-hidden">
-            <img src="/logo.png" alt="AgentEvo" className="w-7 h-7 object-contain" />
-          </div>
-          <span className="font-semibold text-xl tracking-tight">AgentEvo.io</span>
+          <BrandIcon className="h-9 w-9 rounded-xl text-sm shadow-lg" />
+          <span className="font-semibold text-xl tracking-tight">EVOAGENT</span>
         </div>
 
         <h1 className="text-3xl font-bold mb-2">Set up your workspace</h1>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BrandIcon } from '@/components/brand-icon'
 import { ConnectWalletButton } from '@/components/near/connect-wallet-button'
 import { SecurityToast } from '@/components/near/security-toast'
 
@@ -31,7 +32,7 @@ const features = [
   {
     icon: '🌐',
     title: 'API First',
-    desc: 'Every feature accessible via REST API. Build on top of AgentEvo from day one.',
+    desc: 'Every feature accessible via REST API. Build on top of EVOAGENT from day one.',
   },
 ]
 
@@ -58,8 +59,8 @@ export default function Home() {
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-gray-950/80 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="AgentEvo logo" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_rgba(255,106,0,0.5)]" />
-            <span className="font-semibold text-lg tracking-tight">AgentEvo.io</span>
+            <BrandIcon className="h-9 w-9 rounded-lg text-sm drop-shadow-[0_0_8px_rgba(255,106,0,0.5)]" />
+            <span className="font-semibold text-lg tracking-tight">EVOAGENT</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -192,12 +193,10 @@ export default function Home() {
       <footer className="border-t border-white/10 px-6 py-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-gray-500 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-gradient-to-br from-fuchsia-400 to-violet-600 overflow-hidden flex items-center justify-center">
-              <img src="/logo.png" alt="AgentEvo" className="w-4 h-4 object-contain" />
-            </div>
-            <span>AgentEvo.io</span>
+            <BrandIcon className="h-5 w-5 rounded text-[0.5rem] leading-none" labelClassName="leading-none" />
+            <span>EVOAGENT</span>
           </div>
-          <p>© 2026 AgentEvo.io — Built by victordeflos</p>
+          <p>© 2026 EVOAGENT — Built by victordeflos</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-gray-300 transition-colors">Privacy</a>
             <a href="#" className="hover:text-gray-300 transition-colors">Terms</a>
