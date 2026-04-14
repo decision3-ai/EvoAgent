@@ -14,7 +14,7 @@ export default function AuthLayout({
       <div className="relative z-10 w-full flex flex-col items-center gap-8 px-4">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2.5">
-          <BrandIcon className="h-9 w-9 rounded-xl text-sm shadow-lg" />
+          <BrandIcon className="h-9 w-9" />
           <span className="font-semibold text-xl text-white tracking-tight">EVOAGENT</span>
         </a>
 

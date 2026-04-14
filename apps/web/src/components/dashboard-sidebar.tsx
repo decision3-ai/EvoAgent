@@ -21,7 +21,7 @@ export function DashboardSidebar() {
     <aside className="w-56 border-r border-white/10 flex flex-col py-6 px-4 shrink-0 h-screen sticky top-0">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 mb-8 px-2 group">
-        <BrandIcon className="h-8 w-8 rounded-lg text-xs drop-shadow-[0_0_6px_rgba(255,106,0,0.4)] group-hover:drop-shadow-[0_0_10px_rgba(255,106,0,0.6)] transition-all" />
+        <BrandIcon className="h-8 w-8 drop-shadow-[0_0_8px_rgba(217,70,239,0.4)] group-hover:drop-shadow-[0_0_14px_rgba(255,140,0,0.45)] transition-all" />
         <span className="font-semibold tracking-tight">EVOAGENT</span>
       </Link>
 

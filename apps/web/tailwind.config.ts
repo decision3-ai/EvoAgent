@@ -9,25 +9,25 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Override fuchsia → orange palette
+        // Synthwave / dino ref: neon magenta primary, purple gradient stops
         fuchsia: {
-          300: '#ffcc55',
-          400: '#ffaa00',
-          500: '#ff6a00',
-          600: '#e05500',
-          700: '#cc4400',
+          300: '#f0abfc',
+          400: '#e879f9',
+          500: '#d946ef',
+          600: '#c026d3',
+          700: '#a21caf',
         },
-        // Override violet → deep blue palette
         violet: {
-          500: '#3a2fad',
-          600: '#2a1f9d',
-          700: '#1a0f8d',
+          400: '#a78bfa',
+          500: '#7c3aed',
+          600: '#6d28d9',
+          700: '#5b21b6',
         },
-        // Override dark grays → dark blue palette
+        // Deep teal-navy surfaces (dark base from reference art)
         gray: {
-          800: '#111840',
-          900: '#0d1235',
-          950: '#0a0f2e',
+          800: '#0f2836',
+          900: '#0a1922',
+          950: '#050d12',
         },
         brand: {
           50: '#f0f9ff',

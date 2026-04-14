@@ -59,7 +59,7 @@ export default function Home() {
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-gray-950/80 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <BrandIcon className="h-9 w-9 rounded-lg text-sm drop-shadow-[0_0_8px_rgba(255,106,0,0.5)]" />
+            <BrandIcon className="h-9 w-9 drop-shadow-[0_0_10px_rgba(217,70,239,0.45)]" />
             <span className="font-semibold text-lg tracking-tight">EVOAGENT</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
@@ -193,7 +193,7 @@ export default function Home() {
       <footer className="border-t border-white/10 px-6 py-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-gray-500 text-sm">
           <div className="flex items-center gap-2">
-            <BrandIcon className="h-5 w-5 rounded text-[0.5rem] leading-none" labelClassName="leading-none" />
+            <BrandIcon className="h-5 w-5" />
             <span>EVOAGENT</span>
           </div>
           <p>© 2026 EVOAGENT — Built by victordeflos</p>

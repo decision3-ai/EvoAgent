@@ -189,7 +189,7 @@ export function MessageBubble({
           Y
         </div>
       ) : (
-        <BrandIcon className="mt-0.5 h-8 w-8 shrink-0 rounded-full text-xs shadow-lg" />
+        <BrandIcon className="mt-0.5 h-8 w-8 shrink-0 drop-shadow-[0_0_6px_rgba(217,70,239,0.35)]" />
       )}
 
       {/* Bubble */}

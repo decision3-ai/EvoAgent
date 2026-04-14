@@ -55,7 +55,7 @@ export default function WorkspacePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-3">
-            <BrandIcon className="h-9 w-9 rounded-xl text-sm shadow-lg" />
+            <BrandIcon className="h-9 w-9" />
             <span className="font-semibold text-lg tracking-tight">EVOAGENT</span>
           </div>
           <Link

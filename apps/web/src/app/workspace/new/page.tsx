@@ -62,7 +62,7 @@ export default function NewWorkspacePage() {
       <div className="relative w-full max-w-lg">
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-10">
-          <BrandIcon className="h-9 w-9 rounded-xl text-sm shadow-lg" />
+          <BrandIcon className="h-9 w-9" />
           <span className="font-semibold text-xl tracking-tight">EVOAGENT</span>
         </div>
 
