@@ -10,33 +10,34 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@near-wallet-selector/core": "^8.9.13",
+    "@near-wallet-selector/here-wallet": "^8.9.13",
+    "@near-wallet-selector/intear-wallet": "^10.1.4",
+    "@near-wallet-selector/meteor-wallet": "^8.9.13",
+    "@near-wallet-selector/modal-ui": "^8.9.13",
+    "@near-wallet-selector/my-near-wallet": "^8.9.13",
+    "@near-wallet-selector/near-mobile-wallet": "^8.9.13",
+    "@tanstack/react-query": "^5.67.0",
+    "axios": "^1.7.9",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.474.0",
+    "near-api-js": "^4.0.4",
     "next": "16.2.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@tanstack/react-query": "^5.67.0",
-    "zustand": "^5.0.3",
-    "axios": "^1.7.9",
-    "clsx": "^2.1.1",
+    "react-markdown": "^10.1.0",
     "tailwind-merge": "^2.6.0",
-    "lucide-react": "^0.474.0",
-"@near-wallet-selector/core": "^8.9.13",
-    "@near-wallet-selector/modal-ui": "^8.9.13",
-    "@near-wallet-selector/my-near-wallet": "^8.9.13",
-    "@near-wallet-selector/meteor-wallet": "^8.9.13",
-    "@near-wallet-selector/here-wallet": "^8.9.13",
-    "@near-wallet-selector/intear-wallet": "^10.1.4",
-    "@near-wallet-selector/near-mobile-wallet": "^8.9.13",
-    "near-api-js": "^4.0.4"
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.7.3",
-    "tailwindcss": "^3.4.17",
-    "postcss": "^8.5.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.19.0",
-    "eslint-config-next": "16.2.2"
+    "eslint-config-next": "16.2.2",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
   }
 }

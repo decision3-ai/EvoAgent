@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { BrandIcon } from '@/components/brand-icon'
 import { useNearWallet } from '@/contexts/near-wallet'
 import { submitFeedback } from '@/lib/api-client'
@@ -61,36 +62,37 @@ function CodeBlock({ content, language }: { content: string; language?: string }
   )
 }
 
-// Renders raw text + fenced code blocks
+// Renders markdown + fenced code blocks (CodeBlock for ``` fences)
 function renderRaw(content: string): React.ReactNode {
-  const parts: React.ReactNode[] = []
-  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g
-  let lastIndex = 0
-  let match
-
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(
-        <span key={lastIndex} className="whitespace-pre-wrap">
-          {content.slice(lastIndex, match.index)}
-        </span>,
-      )
-    }
-    parts.push(
-      <CodeBlock key={match.index} language={match[1] || undefined} content={match[2].trim()} />,
-    )
-    lastIndex = match.index + match[0].length
-  }
-
-  if (lastIndex < content.length) {
-    parts.push(
-      <span key={lastIndex} className="whitespace-pre-wrap">
-        {content.slice(lastIndex)}
-      </span>,
-    )
-  }
-
-  return parts.length > 0 ? <>{parts}</> : <span className="whitespace-pre-wrap">{content}</span>
+  return (
+    <ReactMarkdown
+      components={{
+        pre: ({ children }) => <>{children}</>,
+        p: ({ children, ...rest }) => (
+          <p className="whitespace-pre-wrap" {...rest}>
+            {children}
+          </p>
+        ),
+        code: ({ className, children, ...rest }) => {
+          const text = String(children)
+          const match = /language-(\w+)/.exec(className || '')
+          if (match) {
+            return <CodeBlock content={text.replace(/\n$/, '')} language={match[1]} />
+          }
+          if (text.endsWith('\n')) {
+            return <CodeBlock content={text.replace(/\n$/, '')} language={undefined} />
+          }
+          return (
+            <code className={className} {...rest}>
+              {children}
+            </code>
+          )
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  )
 }
 
 const SECTIONS = {
