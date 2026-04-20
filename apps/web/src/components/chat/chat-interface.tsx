@@ -189,7 +189,6 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
   const sessionGroups = groupSessionsByDate(sessions)
   const agentName = workspace.agent_profile?.name ?? 'Coding Partner'
-  const agentModel = workspace.agent_profile?.model ?? 'gpt-4o'
 
   return (
     <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
@@ -290,31 +289,16 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <BrandIcon className="h-8 w-8 drop-shadow-[0_0_8px_rgba(217,70,239,0.4)]" />
+              <img
+                src="/3.png"
+                alt=""
+                className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/10 drop-shadow-[0_0_8px_rgba(217,70,239,0.4)]"
+              />
               <div>
                 <span className="text-sm font-medium">{agentName}</span>
-                <span className="ml-2 text-xs text-gray-500 font-mono">{agentModel}</span>
               </div>
             </div>
           </div>
-
-          {workspace.tech_stack.length > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5">
-              {workspace.tech_stack.slice(0, 4).map((tech) => (
-                <span
-                  key={tech}
-                  className="text-xs bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-400"
-                >
-                  {tech}
-                </span>
-              ))}
-              {workspace.tech_stack.length > 4 && (
-                <span className="text-xs text-gray-500">
-                  +{workspace.tech_stack.length - 4}
-                </span>
-              )}
-            </div>
-          )}
         </header>
 
         {/* Messages */}
@@ -322,7 +306,11 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
             {messages.length === 0 && (
               <div className="text-center pt-16">
-                <BrandIcon className="mx-auto mb-4 h-16 w-16 shadow-xl shadow-fuchsia-500/25" />
+                <img
+                  src="/3.png"
+                  alt=""
+                  className="mx-auto mb-4 h-16 w-16 rounded-full object-cover shadow-xl shadow-fuchsia-500/25 ring-1 ring-white/10"
+                />
                 <h2 className="text-xl font-semibold mb-2">
                   {agentName} — ready to build
                 </h2>
@@ -371,7 +359,11 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
             {streamingContent && (
               <div className="flex gap-3">
-                <BrandIcon className="mt-0.5 h-8 w-8 shrink-0" />
+                <img
+                  src="/3.png"
+                  alt=""
+                  className="mt-0.5 h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/10"
+                />
                 <div className="max-w-[78%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-gray-100">
                   <span className="whitespace-pre-wrap">{streamingContent}</span>
                   <span className="inline-block w-0.5 h-4 bg-fuchsia-400 animate-pulse ml-0.5 align-middle" />
@@ -381,7 +373,11 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
 
             {loading && !streamingContent && (
               <div className="flex gap-3">
-                <BrandIcon className="mt-0.5 h-8 w-8 shrink-0" />
+                <img
+                  src="/3.png"
+                  alt=""
+                  className="mt-0.5 h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/10"
+                />
                 <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
                   <div className="flex gap-1 items-center h-5">
                     <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-bounce [animation-delay:-0.3s]" />

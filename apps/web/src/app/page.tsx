@@ -58,9 +58,12 @@ export default function Home() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-gray-950/80 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <BrandIcon className="h-9 w-9 drop-shadow-[0_0_10px_rgba(217,70,239,0.45)]" />
-            <span className="font-semibold text-lg tracking-tight">EVOAGENT</span>
+          <div className="flex items-center">
+            <img
+              src="/first.png"
+              alt=""
+              className="h-[2.5875rem] w-[2.5875rem] object-contain shrink-0 drop-shadow-[0_0_10px_rgba(217,70,239,0.45)]"
+            />
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">Features</a>

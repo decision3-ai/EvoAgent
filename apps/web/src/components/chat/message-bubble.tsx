@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { BrandIcon } from '@/components/brand-icon'
 import { useNearWallet } from '@/contexts/near-wallet'
 import { submitFeedback } from '@/lib/api-client'
 import type { Message } from '@/lib/api-client'
@@ -191,7 +190,11 @@ export function MessageBubble({
           Y
         </div>
       ) : (
-        <BrandIcon className="mt-0.5 h-8 w-8 shrink-0 drop-shadow-[0_0_6px_rgba(217,70,239,0.35)]" />
+        <img
+          src="/3.png"
+          alt=""
+          className="mt-0.5 h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/10"
+        />
       )}
 
       {/* Bubble */}

@@ -85,8 +85,8 @@ export default function WorkspacePage() {
               {/* Icon + name */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
-                    {ws.name[0]?.toUpperCase() ?? 'W'}
+                  <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 shadow-md ring-1 ring-white/10">
+                    <img src="/2.png" alt="" className="h-full w-full object-cover" />
                   </div>
                   <div>
                     <h2 className="font-semibold text-sm group-hover:text-fuchsia-300 transition-colors">
