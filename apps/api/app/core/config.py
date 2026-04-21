@@ -24,6 +24,7 @@ class Settings(BaseSettings):
         'http://localhost:3000',
         'https://evoagent.io',
         'https://www.evoagent.io',
+        'https://agentevo-web.vercel.app',
     ]
     # Override via env: ALLOWED_ORIGINS='["https://evoagent.io","https://www.evoagent.io"]'
 
