@@ -19,14 +19,79 @@
 
   html {
     scroll-behavior: smooth;
+    background-color: #0a0a1a;
   }
 
   body {
-    background-color: hsl(var(--background));
+    background-color: transparent;
     color: hsl(var(--foreground));
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 }
+
+/* ── Purple Rain background ─────────────────────────────── */
+@keyframes purple-rain-1 {
+  from { mask-position: 0 0;    -webkit-mask-position: 0 0;    }
+  to   { mask-position: 0 140px; -webkit-mask-position: 0 140px; }
+}
+
+@keyframes purple-rain-2 {
+  from { mask-position: 0 0;    -webkit-mask-position: 0 0;    }
+  to   { mask-position: 0 150px; -webkit-mask-position: 0 150px; }
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Layer 1 — closer, faster (2 px lines every 25 px) */
+body::before {
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0px, transparent 23px,
+    rgba(155, 89, 182, 0.22) 23px, rgba(155, 89, 182, 0.22) 25px
+  );
+  mask-image: repeating-linear-gradient(
+    to bottom,
+    black 0px, black 55px,
+    transparent 55px, transparent 140px
+  );
+  -webkit-mask-image: repeating-linear-gradient(
+    to bottom,
+    black 0px, black 55px,
+    transparent 55px, transparent 140px
+  );
+  animation: purple-rain-1 1.1s linear infinite;
+}
+
+/* Layer 2 — farther, slower (1 px lines every 35 px, offset start) */
+body::after {
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0px, transparent 34px,
+    rgba(123, 45, 139, 0.15) 34px, rgba(123, 45, 139, 0.15) 35px
+  );
+  mask-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 30px,
+    black 30px, black 75px,
+    transparent 75px, transparent 150px
+  );
+  -webkit-mask-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 30px,
+    black 30px, black 75px,
+    transparent 75px, transparent 150px
+  );
+  animation: purple-rain-2 1.8s linear infinite;
+  animation-delay: -0.6s;
+}
+/* ─────────────────────────────────────────────────────── */
 
 @layer utilities {
   .gradient-text {
