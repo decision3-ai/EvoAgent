@@ -1,10 +1,14 @@
 import uuid
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
-from typing import List
+from typing import List, Optional
 
+import redis.asyncio as aioredis
+
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.auth import get_current_user_id
 from app.workspaces.models import Workspace, AgentProfile, Session, Message, Feedback
@@ -83,6 +87,46 @@ async def get_workspace(
     db: AsyncSession = Depends(get_db),
 ) -> Workspace:
     return await _get_owned_workspace(workspace_id, owner_id, db)
+
+
+@router.get('/{workspace_id}/status')
+async def get_workspace_status(
+    workspace_id: uuid.UUID,
+    owner_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    await _get_owned_workspace(workspace_id, owner_id, db)
+
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    try:
+        value = await r.get(f'maintenance:{workspace_id}')
+    finally:
+        await r.aclose()
+
+    now_utc = datetime.now(timezone.utc)
+
+    if value == 'true':
+        next_available = now_utc.replace(hour=1, minute=0, second=0, microsecond=0)
+        if next_available <= now_utc:
+            next_available += timedelta(days=1)
+        return {
+            'maintenance_mode': True,
+            'message': 'evolving',
+            'next_available': next_available.isoformat(),
+        }
+
+    if value == 'false':
+        return {
+            'maintenance_mode': False,
+            'message': 'evolved',
+            'next_available': None,
+        }
+
+    return {
+        'maintenance_mode': False,
+        'message': '',
+        'next_available': None,
+    }
 
 
 @router.patch('/{workspace_id}', response_model=WorkspaceResponse)

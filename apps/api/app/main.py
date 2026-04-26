@@ -11,9 +11,11 @@ from app.chat.router import router as chat_router
 from app.agents.router import router as agents_router
 from app.evolution.router import router as evolution_router
 from app.auth.router import router as auth_router
+from app.analytics.router import router as analytics_router
 import app.agents.models  # noqa: F401 — registers models with SQLAlchemy metadata
 import app.workspaces.models  # noqa: F401 — registers Feedback and other workspace models
 import app.auth.models  # noqa: F401 — registers User model
+import app.analytics.models  # noqa: F401 — registers AnalyticsEvent model
 
 
 @asynccontextmanager
@@ -46,6 +48,7 @@ app.include_router(workspaces_router, prefix='/api/v1/workspaces', tags=['worksp
 app.include_router(chat_router, prefix='/api/v1/workspaces', tags=['chat'])
 app.include_router(agents_router, prefix='/api/v1/agents', tags=['agents'])
 app.include_router(evolution_router, prefix='/api/v1/evolution', tags=['evolution'])
+app.include_router(analytics_router, prefix='/api/v1/events', tags=['analytics'])
 
 
 @app.get('/health', tags=['system'])

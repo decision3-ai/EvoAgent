@@ -83,6 +83,21 @@ export async function updateWorkspace(
   return res.data
 }
 
+export type WorkspaceStatus = {
+  maintenance_mode: boolean
+  message: string
+  next_available: string | null
+}
+
+export async function fetchWorkspaceStatus(
+  token: string,
+  workspaceId: string,
+): Promise<WorkspaceStatus> {
+  const api = createApiClient(token)
+  const res = await api.get<WorkspaceStatus>(`/api/v1/workspaces/${workspaceId}/status`)
+  return res.data
+}
+
 export async function fetchWorkspaces(token: string): Promise<Workspace[]> {
   const api = createApiClient(token)
   const res = await api.get<Workspace[]>('/api/v1/workspaces/')
