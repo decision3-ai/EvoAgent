@@ -3,14 +3,15 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useNearWallet } from '@/contexts/near-wallet'
-import { submitFeedback } from '@/lib/api-client'
+import { submitFeedback, trackEvent } from '@/lib/api-client'
 import type { Message } from '@/lib/api-client'
 
-function CopyButton({ text, className = '' }: { text: string; className?: string }) {
+function CopyButton({ text, className = '', onCopy }: { text: string; className?: string; onCopy?: () => void }) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
     await navigator.clipboard.writeText(text)
+    onCopy?.()
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -43,7 +44,7 @@ function CopyButton({ text, className = '' }: { text: string; className?: string
   )
 }
 
-function CodeBlock({ content, language }: { content: string; language?: string }) {
+function CodeBlock({ content, language, onCopy }: { content: string; language?: string; onCopy?: () => void }) {
   return (
     <div className="my-3 rounded-xl overflow-hidden border border-white/[0.12] bg-gray-900/70 shadow-lg">
       {/* Header */}
@@ -51,7 +52,7 @@ function CodeBlock({ content, language }: { content: string; language?: string }
         <span className="text-xs font-mono font-medium text-gray-400 tracking-wide">
           {language ?? 'code'}
         </span>
-        <CopyButton text={content} />
+        <CopyButton text={content} onCopy={onCopy} />
       </div>
       {/* Code — max-height + both-axis scroll for long blocks */}
       <pre className="p-4 overflow-x-auto overflow-y-auto max-h-80 scrollbar-thin">
@@ -62,7 +63,11 @@ function CodeBlock({ content, language }: { content: string; language?: string }
 }
 
 // Renders markdown + fenced code blocks (CodeBlock for ``` fences)
-function renderRaw(content: string): React.ReactNode {
+function renderRaw(
+  content: string,
+  onCodeCopy?: (index: number, language: string) => void,
+): React.ReactNode {
+  let blockIndex = 0
   return (
     <ReactMarkdown
       components={{
@@ -76,10 +81,25 @@ function renderRaw(content: string): React.ReactNode {
           const text = String(children)
           const match = /language-(\w+)/.exec(className || '')
           if (match) {
-            return <CodeBlock content={text.replace(/\n$/, '')} language={match[1]} />
+            const idx = blockIndex++
+            const lang = match[1]
+            return (
+              <CodeBlock
+                content={text.replace(/\n$/, '')}
+                language={lang}
+                onCopy={onCodeCopy ? () => onCodeCopy(idx, lang) : undefined}
+              />
+            )
           }
           if (text.endsWith('\n')) {
-            return <CodeBlock content={text.replace(/\n$/, '')} language={undefined} />
+            const idx = blockIndex++
+            return (
+              <CodeBlock
+                content={text.replace(/\n$/, '')}
+                language={undefined}
+                onCopy={onCodeCopy ? () => onCodeCopy(idx, '') : undefined}
+              />
+            )
           }
           return (
             <code className={className} {...rest}>
@@ -102,7 +122,10 @@ const SECTIONS = {
 
 type SectionKey = keyof typeof SECTIONS
 
-function parseAndRender(content: string): React.ReactNode {
+function parseAndRender(
+  content: string,
+  onCodeCopy?: (index: number, language: string) => void,
+): React.ReactNode {
   const sectionRegex = /\*\*(PLAN|CODE|EXPLANATION):\*\*/g
   const chunks: Array<{ type: SectionKey | null; text: string }> = []
   let lastIndex = 0
@@ -121,7 +144,7 @@ function parseAndRender(content: string): React.ReactNode {
 
   // No structured sections — render as plain
   if (chunks.length === 0 || (chunks.length === 1 && chunks[0].type === null)) {
-    return renderRaw(content)
+    return renderRaw(content, onCodeCopy)
   }
 
   return (
@@ -135,7 +158,7 @@ function parseAndRender(content: string): React.ReactNode {
                 {meta.label}
               </span>
             )}
-            <div>{renderRaw(chunk.text)}</div>
+            <div>{renderRaw(chunk.text, onCodeCopy)}</div>
           </div>
         )
       })}
@@ -143,8 +166,11 @@ function parseAndRender(content: string): React.ReactNode {
   )
 }
 
-function renderContent(content: string): React.ReactNode {
-  return parseAndRender(content)
+function renderContent(
+  content: string,
+  onCodeCopy?: (index: number, language: string) => void,
+): React.ReactNode {
+  return parseAndRender(content, onCodeCopy)
 }
 
 function extractCodeBlocks(content: string): string[] {
@@ -170,6 +196,14 @@ export function MessageBubble({
   const { accountId } = useNearWallet()
   const [feedback, setFeedback] = useState<1 | 5 | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const handleCodeCopy = (codeBlockIndex: number, language: string) => {
+    if (!accountId) return
+    trackEvent(accountId, workspaceId, sessionId, message.id, 'code_copy', {
+      code_block_index: codeBlockIndex,
+      language,
+    }).catch(() => {/* fire-and-forget */})
+  }
 
   const handleFeedback = async (score: 1 | 5) => {
     if (!accountId || submitting || feedback !== null) return
@@ -215,7 +249,7 @@ export function MessageBubble({
               : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm'
           }`}
         >
-          {renderContent(message.content)}
+          {renderContent(message.content, isUser ? undefined : handleCodeCopy)}
         </div>
 
         <div className="flex items-center gap-3">

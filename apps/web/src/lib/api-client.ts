@@ -123,6 +123,24 @@ export function streamChat(
   })
 }
 
+export async function trackEvent(
+  token: string,
+  workspaceId: string,
+  sessionId: string | null,
+  messageId: string | null,
+  eventType: string,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const api = createApiClient(token)
+  await api.post('/api/v1/events/', {
+    workspace_id: workspaceId,
+    session_id: sessionId,
+    message_id: messageId,
+    event_type: eventType,
+    metadata,
+  })
+}
+
 export async function submitFeedback(
   token: string,
   workspaceId: string,
