@@ -348,14 +348,20 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               </div>
             )}
 
-            {messages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                workspaceId={workspace.id}
-                sessionId={sessionId}
-              />
-            ))}
+            {messages.map((msg, i) => {
+              const isLastAssistant =
+                msg.role === 'assistant' &&
+                messages.slice(i + 1).every((m) => m.role !== 'assistant')
+              return (
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  workspaceId={workspace.id}
+                  sessionId={sessionId}
+                  isLastAssistant={isLastAssistant}
+                />
+              )
+            })}
 
             {streamingContent && (
               <div className="flex gap-3">

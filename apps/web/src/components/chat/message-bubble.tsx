@@ -187,15 +187,19 @@ export function MessageBubble({
   message,
   workspaceId,
   sessionId,
+  isLastAssistant = false,
 }: {
   message: Message
   workspaceId: string
   sessionId: string
+  isLastAssistant?: boolean
 }) {
   const isUser = message.role === 'user'
   const { accountId } = useNearWallet()
   const [feedback, setFeedback] = useState<1 | 5 | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [completed, setCompleted] = useState(false)
+  const [completionSubmitting, setCompletionSubmitting] = useState(false)
 
   const handleCodeCopy = (codeBlockIndex: number, language: string) => {
     if (!accountId) return
@@ -213,6 +217,17 @@ export function MessageBubble({
       setFeedback(score)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleCompletion = async () => {
+    if (!accountId || completionSubmitting || completed) return
+    setCompletionSubmitting(true)
+    try {
+      await trackEvent(accountId, workspaceId, sessionId, null, 'completion', {})
+      setCompleted(true)
+    } finally {
+      setCompletionSubmitting(false)
     }
   }
 
@@ -251,6 +266,22 @@ export function MessageBubble({
         >
           {renderContent(message.content, isUser ? undefined : handleCodeCopy)}
         </div>
+
+        {isLastAssistant && !isUser && (
+          <div className="mt-2">
+            <button
+              onClick={handleCompletion}
+              disabled={completed || completionSubmitting}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                completed
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 cursor-not-allowed'
+                  : 'border-white/10 bg-white/5 text-gray-400 hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 cursor-pointer'
+              }`}
+            >
+              {completed ? '✅ Solved' : 'Did this solve it? ✅ Solved'}
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
