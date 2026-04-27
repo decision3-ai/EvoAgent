@@ -1,11 +1,10 @@
 import os
 from celery.schedules import crontab
-from dotenv import load_dotenv
 
-load_dotenv()
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
 
-broker_url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
-result_backend = os.getenv('REDIS_URL', 'redis://redis:6379/0').replace('/0', '/1')
+broker_url = REDIS_URL
+result_backend = REDIS_URL.replace('/0', '/1')
 
 task_serializer = 'json'
 result_serializer = 'json'
