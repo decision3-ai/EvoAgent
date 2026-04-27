@@ -80,6 +80,18 @@ class _Feedback(_Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
+class _AnalyticsEvent(_Base):
+    """V2.1 event tracking — code_copy and completion events per workspace."""
+    __tablename__ = 'analytics_events'
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=True)
+    message_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=True)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
 class _EvolutionHistory(_Base):
     """Daily fitness snapshots used for the consecutive-low-score trigger."""
     __tablename__ = 'evolution_history'
@@ -282,13 +294,16 @@ def evolve_agent(self, agent_id: str) -> dict:
 @app.task(name='tasks.agent_tasks.compute_fitness', bind=True, max_retries=3)
 def compute_fitness(self, agent_id: str) -> dict:
     """
-    Compute fitness score for an agent profile from user feedback.
+    Compute fitness score for an agent profile from user feedback + retention.
 
-    Formula:
-        fitness = 0.45 * feedback_score
-                + 0.20 * weighted_correction
-                + 0.15 * session_depth_bonus
-                + 0.20 * consistency
+    Formula (V2.2 — code_copy + completion added, prior weights scaled by 0.65):
+        fitness = 0.2210 * feedback_score
+                + 0.0975 * weighted_correction
+                + 0.0715 * session_depth_bonus
+                + 0.0975 * consistency
+                + 0.1625 * return_score
+                + 0.2000 * code_copy_score
+                + 0.1500 * completion_score
 
     - feedback_score:      avg(all scores) / 5  → [0, 1]
     - weighted_correction: per thumbs-down (score<=2): -0.3 if within first 2
@@ -296,6 +311,16 @@ def compute_fitness(self, agent_id: str) -> dict:
                            thumbs-down events → [-0.3, 0]
     - session_depth_bonus: fraction of sessions with >3 messages → [0, 1]
     - consistency:         fraction of sessions with at least one score>=4 → [0, 1]
+    - return_score:        best retention tier achieved across workspace sessions,
+                           derived from sessions.created_at (no new event needed):
+                             • >=3 distinct ISO weeks of activity     → 1.00
+                             • gap of 2–7 days between sessions       → 0.85
+                             • next-day return (gap = 1 day)          → 0.60
+                             • same-day return (>=2 sessions in a day)→ 0.25
+                             • <2 sessions                            → 0.00
+    - code_copy_score:     code_copy events / total assistant messages,
+                           clamped to [0, 1]
+    - completion_score:    completion events / total sessions, clamped to [0, 1]
 
     Final value is clamped to [0.0, 1.0] and rounded to 4 decimal places.
     agent_id is an AgentProfile.id (V1 has no separate agents table).
@@ -370,20 +395,102 @@ def compute_fitness(self, agent_id: str) -> dict:
                 else 0.0
             )
 
+            # --- return_score: best retention tier from sessions.created_at ---
+            session_dates = session.execute(
+                select(_Session.created_at)
+                .where(_Session.workspace_id == profile.workspace_id)
+                .where(_Session.created_at.is_not(None))
+                .order_by(_Session.created_at.asc())
+            ).scalars().all()
+
+            same_day_return = False
+            next_day_return = False
+            seven_day_return = False
+            weekly_recurring = False
+
+            if len(session_dates) >= 2:
+                iso_weeks = {
+                    (d.isocalendar().year, d.isocalendar().week)
+                    for d in session_dates
+                }
+                weekly_recurring = len(iso_weeks) >= 3
+
+                for i in range(1, len(session_dates)):
+                    gap_days = (session_dates[i].date() - session_dates[i - 1].date()).days
+                    if gap_days == 0:
+                        same_day_return = True
+                    elif gap_days == 1:
+                        next_day_return = True
+                    elif 2 <= gap_days <= 7:
+                        seven_day_return = True
+
+            if weekly_recurring:
+                return_score = 1.00
+            elif seven_day_return:
+                return_score = 0.85
+            elif next_day_return:
+                return_score = 0.60
+            elif same_day_return:
+                return_score = 0.25
+            else:
+                return_score = 0.00
+
+            # --- code_copy_score: code_copy events / total assistant messages ---
+            code_copy_count = session.execute(
+                select(func.count(_AnalyticsEvent.id))
+                .where(_AnalyticsEvent.workspace_id == profile.workspace_id)
+                .where(_AnalyticsEvent.event_type == 'code_copy')
+            ).scalar_one() or 0
+
+            assistant_msg_count = session.execute(
+                select(func.count(_Message.id))
+                .join(_Session, _Session.id == _Message.session_id)
+                .where(_Session.workspace_id == profile.workspace_id)
+                .where(_Message.role == 'assistant')
+            ).scalar_one() or 0
+
+            code_copy_score = (
+                min(1.0, code_copy_count / assistant_msg_count)
+                if assistant_msg_count > 0 else 0.0
+            )
+
+            # --- completion_score: completion events / total sessions ---
+            completion_count = session.execute(
+                select(func.count(_AnalyticsEvent.id))
+                .where(_AnalyticsEvent.workspace_id == profile.workspace_id)
+                .where(_AnalyticsEvent.event_type == 'completion')
+            ).scalar_one() or 0
+
+            total_workspace_sessions = session.execute(
+                select(func.count(_Session.id))
+                .where(_Session.workspace_id == profile.workspace_id)
+            ).scalar_one() or 0
+
+            completion_score = (
+                min(1.0, completion_count / total_workspace_sessions)
+                if total_workspace_sessions > 0 else 0.0
+            )
+
             # --- combine and clamp to [0.0, 1.0] ---
+            # V2.2 weights: prior V2.1 weights scaled by 0.65; code_copy=0.20, completion=0.15
             fitness_raw = (
-                0.45 * feedback_score
-                + 0.20 * weighted_correction
-                + 0.15 * session_depth_bonus
-                + 0.20 * consistency
+                0.2210 * feedback_score
+                + 0.0975 * weighted_correction
+                + 0.0715 * session_depth_bonus
+                + 0.0975 * consistency
+                + 0.1625 * return_score
+                + 0.2000 * code_copy_score
+                + 0.1500 * completion_score
             )
             fitness = round(max(0.0, min(1.0, fitness_raw)), 4)
 
         logger.info(
             '[FitnessTask] Agent %s fitness=%.4f (n=%d, feedback_score=%.4f, '
-            'weighted_correction=%.4f, session_depth_bonus=%.4f, consistency=%.4f)',
+            'weighted_correction=%.4f, session_depth_bonus=%.4f, consistency=%.4f, '
+            'return_score=%.4f, code_copy_score=%.4f, completion_score=%.4f)',
             agent_id, fitness, len(all_scores),
             feedback_score, weighted_correction, session_depth_bonus, consistency,
+            return_score, code_copy_score, completion_score,
         )
         return {
             'agent_id': agent_id,
@@ -395,6 +502,9 @@ def compute_fitness(self, agent_id: str) -> dict:
                 'weighted_correction': round(weighted_correction, 4),
                 'session_depth_bonus': round(session_depth_bonus, 4),
                 'consistency': round(consistency, 4),
+                'return_score': round(return_score, 4),
+                'code_copy_score': round(code_copy_score, 4),
+                'completion_score': round(completion_score, 4),
             },
         }
 
