@@ -32,6 +32,7 @@ export type Workspace = {
   description: string | null
   tech_stack: string[]
   is_default: boolean
+  evo_points: number
   created_at: string
   updated_at: string
   agent_profile: AgentProfile | null

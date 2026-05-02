@@ -112,6 +112,15 @@ export default function WorkspacePage() {
                 </p>
               )}
 
+              {/* EvoPoints */}
+              {ws.evo_points > 0 && (
+                <div className="flex items-center gap-1.5 mb-3">
+                  <span className="text-xs font-semibold text-fuchsia-400 bg-fuchsia-500/10 border border-fuchsia-500/20 px-2 py-0.5 rounded-full">
+                    ⚡ {ws.evo_points} EP
+                  </span>
+                </div>
+              )}
+
               {/* Tech stack */}
               {ws.tech_stack.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
