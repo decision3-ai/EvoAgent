@@ -6,17 +6,17 @@ SaaS coding partner platform. One core AI agent per workspace works with the use
 
 **Tagline:** AI Agents That Learn and Evolve
 **Owner:** Victor
-**Stage:** V3 LIVE
+**Stage:** V3.5 LIVE
 
 ### Version ladder (product language)
 
 | Version | Codename | Status | Meaning |
 |---------|----------|--------|---------|
-| **V1** | **Evolution** | LIVE | Shipped product: workspace → chat → plan/code/explain, SSE, settings, feedback captured. Evolution here means the agent improves through **conversation and context** with the user. |
+| **V1** | **Evolution** | LIVE | Shipped product: workspace → chat → plan/code/explain, SSE, settings, feedback captured. |
 | **V2** | **Fitness** | LIVE | Background layer: formal scoring, workers, metrics, pipelines that turn feedback into measurable fitness (Celery, evolution plugin modules). |
 | **V2.3** | **Champion vs Challenger** | LIVE | A/B testing for agent prompts—champion prompt vs challenger prompt, 50/50 traffic split, automatic evaluation. |
 | **V3** | **Persistent Memory** | LIVE | Agents remember across sessions via Mem0 + pgvector. Memory writer, retriever, decay. |
-| **V3.5** | **Constitutional** | NEXT | Constitutional Rules + Anti-sycophancy + EvoPoints gamification. |
+| **V3.5** | **EvoSmart + Fallback + Constitutional** | LIVE | Gemini direct route, multi-provider fallback chain, EvoPoints, constitutional rules. |
 | **V4** | *TBD* | — | Reserved on the roadmap. |
 
 ---
@@ -56,7 +56,7 @@ A/B testing framework for agent prompt optimization.
 
 **Traffic split:**
 - 50/50 per session, stored in Redis with 24h TTL
-- Key pattern: `variant:{session_id}`
+- Key pattern: `session_variant:{session_id}`
 
 **Analytics:**
 - Events track `variant` field in `event_metadata`
@@ -70,12 +70,11 @@ A/B testing framework for agent prompt optimization.
 
 ### Pre-V3 — Async Evolution Pipeline
 
-Evolution jobs are now fire-and-forget via Celery.
+Evolution jobs are fire-and-forget via Celery.
 
-**How it works:**
-- `evolve_agent` is now `run_evolution` Celery task
+- `run_evolution` Celery task
 - Redis tracks status: `evolution_status:{workspace_id}` = `queued` | `running` | `done` | `failed`
-- Non-blocking for the user—evolution happens in background
+- Non-blocking for the user
 
 ---
 
@@ -96,19 +95,48 @@ last_used_at    TIMESTAMP
 ```
 
 **Memory Writer:**
-- `write_session_memories` Celery task runs after each session ends
+- `write_session_memories` Celery task — fire-and-forget after each chat turn
 - Extracts facts, preferences, goals from conversation
 
 **Memory Retriever:**
-- `get_relevant_memories()` function
-- pgvector cosine similarity search
-- Multilingual embeddings via OpenAI `text-embedding-3-small`
-- Injected into agent context at chat time
+- `get_relevant_memories()` — pgvector cosine similarity search
+- Fallback to `importance_score` ranking if no embeddings
+- Updates `last_used_at` on retrieved rows
+- Injected into agent system prompt at chat time
 
 **Memory Decay:**
 - `decay_memories` Celery task runs nightly at **02:30 UTC**
 - Reduces `importance_score` over time
 - Skips `memory_type='goal'` (goals don't decay)
+
+---
+
+### V3.5 — EvoSmart + Fallback Chain + EvoPoints + Constitutional
+
+#### EvoSmart Route
+- `POST /api/v1/evosmart/chat` — direct Gemini 2.5 Flash integration
+- Stateless: history passed by client each request
+- JWT auth required (`Depends(get_current_user_id)`)
+- Model: `gemini-2.5-flash` via `google-generativeai`
+- `GEMINI_API_KEY` env var
+
+#### Fallback Chain (chat router)
+- Provider order: OpenRouter `deepseek/deepseek-chat` → OpenRouter `google/gemini-2.0-flash-001` → Anthropic `claude-sonnet-4-6`
+- `OPENROUTER_API_KEY` required for OpenRouter providers; silently skipped if missing
+- Works for both sync (`/chat`) and streaming (`/chat/stream`) endpoints
+- Default agent model: `deepseek/deepseek-chat`
+
+#### EvoPoints
+- `evo_points` + `evo_points_updated_at` columns on `workspaces`
+- +20 on workspace create
+- +10 on thumbs up (feedback score=5)
+- +3 on code_copy event (deduplicated: 1 per message per day)
+- Exposed in `WorkspaceResponse` schema
+
+#### Constitutional Rules
+- `app/evolution/constitutional.py` — `DEFAULT_CONSTITUTIONAL_RULES` + `ANTI_SYCOPHANCY_RULES`
+- Appended to every system prompt after memory injection
+- Anti-flattery, anti-sycophancy, directness, uncertainty acknowledgement
 
 ---
 
@@ -129,7 +157,7 @@ last_used_at    TIMESTAMP
 ```
 Task → Plan → Code → Explanation → Interaction
 ```
-Core modules: `workspaces/`, `chat/`, `memory/`
+Core modules: `workspaces/`, `chat/`, `memory/`, `evosmart/`, `evolution/`
 
 ### PLUGIN LAYER — Background (user never sees)
 ```
@@ -138,6 +166,11 @@ Feedback → Fitness metrics → Evolution → Memory extraction
 Plugin modules: `workers/`, `analytics/`
 
 **Hard rule:** Core does not import from Plugin. Plugin reads Core tables. No circular coupling.
+
+### Shared Core Utilities
+- `core/celery.py` — single `celery_client` instance (dispatches tasks by name only)
+- `core/redis.py` — singleton Redis connection pool (`get_redis()`)
+- `workspaces/helpers.py` — `_get_owned_workspace()`, `_get_session()` helpers
 
 ---
 
@@ -150,6 +183,7 @@ Plugin modules: `workers/`, `analytics/`
 | Backend API | FastAPI (Python 3.12) + SQLAlchemy async |
 | Database | PostgreSQL 16 + pgvector |
 | Embeddings | OpenAI `text-embedding-3-small` |
+| LLM providers | OpenRouter (DeepSeek, Gemini) + Anthropic (fallback chain) + Google Gemini (EvoSmart) |
 | Cache / Queue | Redis 7 + Celery + Celery Beat |
 | Package Manager | pnpm + Turborepo (monorepo) |
 | Containerization | Docker + Docker Compose |
@@ -165,13 +199,16 @@ evoagent.io/
 │   ├── web/              # Next.js 15 frontend (port 3000)
 │   ├── api/              # FastAPI backend (port 8000)
 │   │   └── app/
-│   │       ├── chat/     # Chat router, SSE streaming
-│   │       ├── workspaces/  # Workspace CRUD, agent profiles
-│   │       ├── memory/   # Memory writer, retriever, decay
-│   │       └── analytics/   # Event tracking, metrics
+│   │       ├── core/         # config, database, auth, celery, redis
+│   │       ├── chat/         # Chat router, SSE streaming, fallback chain
+│   │       ├── workspaces/   # Workspace CRUD, agent profiles, helpers
+│   │       ├── evosmart/     # Gemini direct route
+│   │       ├── memory/       # mem0 client, retriever, embeddings
+│   │       ├── evolution/    # constitutional rules
+│   │       └── analytics/    # Event tracking, EvoPoints
 │   └── workers/          # Celery background workers
 │       └── tasks/
-│           └── agent_tasks.py  # run_evolution, evaluate_challenger, etc.
+│           └── agent_tasks.py  # run_evolution, evaluate_challenger, write_session_memories, decay_memories
 ├── infrastructure/
 │   └── docker/           # Dockerfiles per service
 ├── migrations/           # Alembic migrations (inside apps/api/)
@@ -190,6 +227,8 @@ evoagent.io/
 - API routes: RESTful, versioned under `/api/v1/`
 - Env vars: always via `core/config.py` (Pydantic Settings), never hardcoded
 - DB changes: always via Alembic migration, never `create_all` in production
+- Redis: always use `get_redis()` from `core/redis.py` — never open/close per request
+- Celery dispatch: always use `celery_client` from `core/celery.py`
 
 ---
 
@@ -197,7 +236,7 @@ evoagent.io/
 
 ```bash
 # All services (Docker)
-cd ~/Documents/evoagent.io
+cd ~/Documents/AgentEvo
 docker-compose up -d
 
 # Frontend only
@@ -212,7 +251,7 @@ docker exec agentevo_api_1 alembic upgrade head
 docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
 
 # Celery worker (local)
-cd apps/workers && celery -A tasks worker --loglevel=info
+cd apps/workers && celery -A tasks worker --loglevel=info -Q evolution,fitness,memory,celery
 
 # Celery beat (scheduler)
 cd apps/workers && celery -A tasks beat --loglevel=info
@@ -234,59 +273,42 @@ cd apps/workers && celery -A tasks beat --loglevel=info
 
 ## Git & deploy cadence
 
-- **Frontend (`apps/web` and anything that affects the Vercel build** — e.g. `pnpm-lock.yaml` when web deps change, `apps/web/vercel.json`, shared turbo config if the web build needs it): when a task changes these, **commit and push to GitHub immediately** after the change so **Vercel** can run a new deployment. Do not leave web-only fixes sitting local unless Victor says to wait.
-- **Backend (`apps/api`, `apps/workers`, Docker/VPS, nginx):** **no automatic push or deploy**—Victor decides when and how (Git push, rsync, `docker-compose`, migrations, etc.).
+- **Frontend (`apps/web` and anything that affects the Vercel build):** commit and push to GitHub immediately so Vercel deploys. Do not leave web-only fixes sitting local unless Victor says to wait.
+- **Backend (`apps/api`, `apps/workers`, Docker/VPS, nginx):** no automatic push or deploy — Victor decides when and how.
 
 ---
 
-## Available Anthropic Models
+## Available Models
 
-- `claude-haiku-4-5-20251001` — fastest, used as default
+**Anthropic:**
+- `claude-haiku-4-5-20251001` — fastest
 - `claude-sonnet-4-5-20250929` — balanced
-- `claude-sonnet-4-6` — latest
-- `claude-opus-4-5-20251101` — most powerful, most expensive
+- `claude-sonnet-4-6` — latest (used as fallback chain last resort)
+- `claude-opus-4-5-20251101` — most powerful
 - Old `claude-3-*` models **do not work** with this API key
+
+**OpenRouter (via fallback chain):**
+- `deepseek/deepseek-chat` — default agent model (cheapest)
+- `google/gemini-2.0-flash-001` — second in chain
+
+**Google (EvoSmart route):**
+- `gemini-2.5-flash` — direct Gemini API
 
 ---
 
 ## Roadmap — Current Status
 
 ### V1 — Evolution COMPLETE
-- Auth (email/password JWT + parallel NEAR wallet support)
-- Workspace CRUD + agent profile settings
-- Chat with AI (evoagent.io AI branding)
-- SSE streaming + fallback to sync
-- Session management + smart title generation
-- PLAN / CODE / EXPLANATION response format
-- Feedback collection (thumbs up/down -> DB)
-- Code block copy + max-height scroll + "Copy all code"
-- Alembic migrations
-- Production deployment (Vercel + VPS)
-
 ### V2 — Fitness COMPLETE
-- Celery workers for background jobs
-- Fitness scoring pipeline
-- Analytics event tracking
-- Maintenance window (00:00-01:00 UTC)
-
 ### V2.3 — Champion vs Challenger COMPLETE
-- A/B testing for agent prompts
-- 50/50 traffic split per session (Redis TTL 24h)
-- `evaluate_challenger` nightly task at 03:00 UTC
-- Variant tracking in analytics events
-
 ### V3 — Persistent Memory COMPLETE
-- `agent_memories` table with pgvector embeddings
-- `write_session_memories` Celery task
-- `get_relevant_memories()` cosine similarity retrieval
-- `decay_memories` nightly task at 02:30 UTC
+### V3.5 — EvoSmart + Fallback Chain + EvoPoints + Constitutional COMPLETE
+- EvoSmart Gemini route (`/api/v1/evosmart/chat`)
+- Multi-provider fallback chain (OpenRouter → Anthropic)
+- EvoPoints (+20 create, +10 thumbs up, +3 code_copy)
+- Constitutional rules + anti-sycophancy injected in every chat
 
-### V3.5 — Constitutional NEXT
-- [ ] Constitutional Rules for agent behaviour
-- [ ] Anti-sycophancy measures
-- [ ] EvoPoints gamification system
-
-### Future (V4+)
+### V4 — TBD
 - Multi-agent system
 - LangGraph orchestration pipeline
 - NEAR smart contracts
@@ -310,10 +332,12 @@ cd apps/workers && celery -A tasks beat --loglevel=info
 ## Known Notes / TODOs
 
 - **NEAR cookie for middleware:** On wallet connect, set `near_account_id` cookie (already done in `near-wallet.tsx`). Edge runtime cannot read localStorage.
-- **Clerk is NOT used** — only in `.gitignore` as a leftover. Auth is NEAR wallet only.
-- **Model default:** All agent profiles default to `claude-haiku-4-5-20251001`. Fallback is hardcoded in `chat/router.py` for old records with invalid models.
+- **Clerk is NOT used** — only in `.gitignore` as a leftover.
+- **Default agent model:** `deepseek/deepseek-chat` via OpenRouter. Fallback chain: OpenRouter → Anthropic.
 - **`--reload` flag removed** from `Dockerfile.api` for production.
-- **Memory embeddings:** Using OpenAI `text-embedding-3-small` for multilingual support.
+- **Memory embeddings:** OpenAI `text-embedding-3-small` for multilingual support. Both `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` must be set for memory to work.
+- **EvoSmart is stateless** — no DB session, no user context, history managed by client.
+- **Workers queue:** `evolution,fitness,memory,celery` — all four required.
 
 ---
 
@@ -329,4 +353,4 @@ cd apps/workers && celery -A tasks beat --loglevel=info
 - `.env` — never modify or commit real secrets
 - `pnpm-lock.yaml` — only update via `pnpm install`
 - NEAR contract IDs: `evoagent.testnet` (testnet), `evoagent.near` (mainnet)
-- `celerybeat-schedule` — auto-generated by Celery Beat
+- `celerybeat-schedule` — auto-generated by Celery Beat, in `.gitignore`
