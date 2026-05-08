@@ -58,7 +58,7 @@ Agents remember context across sessions via Mem0 + pgvector.
 ### EvoSmart
 - New stateless endpoint: `POST /api/v1/evosmart/chat`
 - Direct Gemini 2.5 Flash integration (`google-generativeai`)
-- JWT auth required, history passed by client each request
+- Javni endpoint — bez JWT auth, history passed by client each request
 - `GEMINI_API_KEY` env var
 
 ### Fallback Chain (chat router)
