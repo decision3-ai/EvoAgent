@@ -3,7 +3,7 @@ EvoSmart router — direct Gemini API integration.
 
 POST /api/v1/evosmart/chat
 Stateless: history is passed by the client each request.
-Model: gemini-2.5-flash-preview-04-17
+Model: gemini-2.5-flash
 """
 
 import logging
@@ -17,7 +17,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-_GEMINI_MODEL = 'gemini-2.5-flash-preview-04-17'
+_GEMINI_MODEL = 'gemini-2.5-flash'
 _TIMEOUT_SECONDS = 120
 
 
