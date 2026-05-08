@@ -116,7 +116,7 @@ last_used_at    TIMESTAMP
 #### EvoSmart Route
 - `POST /api/v1/evosmart/chat` — direct Gemini 2.5 Flash integration
 - Stateless: history passed by client each request
-- JWT auth required (`Depends(get_current_user_id)`)
+- Javni endpoint — bez JWT auth
 - Model: `gemini-2.5-flash` via `google-generativeai`
 - `GEMINI_API_KEY` env var
 
