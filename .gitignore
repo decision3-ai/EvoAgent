@@ -53,3 +53,6 @@ redis_data/
 
 # pnpm
 .pnpm-debug.log
+
+# Celery
+celerybeat-schedule
