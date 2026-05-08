@@ -10,3 +10,5 @@ langgraph==0.2.74
 langchain-openai==0.3.8
 langchain-anthropic==0.3.10
 openai==1.65.4
+anthropic==0.49.0
+mem0ai==0.1.101

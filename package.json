@@ -1,5 +1,5 @@
 {
-  "name": "agentevo",
+  "name": "evoagent",
   "private": true,
   "scripts": {
     "dev": "turbo run dev",

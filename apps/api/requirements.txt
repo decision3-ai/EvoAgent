@@ -18,6 +18,9 @@ python-dotenv==1.0.1
 redis==5.2.1
 celery==5.4.0
 
+# Memory
+mem0ai==0.1.101
+
 # AI / Agent
 langchain==0.3.20
 langgraph==0.2.74
@@ -34,3 +37,6 @@ python-multipart==0.0.20
 
 # HTTP client
 httpx==0.28.1
+
+# Google Gemini
+google-generativeai==0.8.4

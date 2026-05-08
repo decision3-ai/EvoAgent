@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str = ''
     ANTHROPIC_API_KEY: str = ''
+    OPENROUTER_API_KEY: str = ''
+    GEMINI_API_KEY: str = ''
 
     JWT_SECRET_KEY: str = 'change-me-in-production'
     JWT_ALGORITHM: str = 'HS256'

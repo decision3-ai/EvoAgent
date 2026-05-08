@@ -1,4 +1,4 @@
-# AgentEvo.io
+# evoagent.io
 
 > AI Agents That Learn and Evolve — SaaS platform for building agents that grow smarter through every interaction.
 
@@ -17,7 +17,7 @@
 ## Project Structure
 
 ```
-AgentEvo/
+evoagent/
 ├── apps/
 │   ├── web/          # Next.js frontend
 │   ├── api/          # FastAPI backend
@@ -118,4 +118,4 @@ See `.env.example` for all required variables.
 
 ---
 
-Built with ❤️ by the AgentEvo team.
+Built with ❤️ by the evoagent.io team.

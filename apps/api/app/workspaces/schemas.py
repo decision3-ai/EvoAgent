@@ -48,6 +48,7 @@ class WorkspaceResponse(BaseModel):
     description: Optional[str]
     tech_stack: List[str]
     is_default: bool
+    evo_points: int = 0
     created_at: datetime
     updated_at: datetime
     agent_profile: Optional[AgentProfileResponse] = None

@@ -67,6 +67,9 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
 
         // Subscribe to wallet state changes (connect / disconnect)
         s.store.observable.subscribe((state) => {
+          // Don't overwrite accountId if email auth is active — the JWT stored
+          // in localStorage is already set as accountId by the restore effect.
+          if (localStorage.getItem('email_auth_token')) return
           const active = state.accounts.find((a) => a.active)
           const id = active?.accountId ?? null
           setAccountId(id)

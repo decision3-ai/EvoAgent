@@ -18,6 +18,9 @@ task_routes = {
     'tasks.agent_tasks.check_evolution_triggers': {'queue': 'fitness'},
     'tasks.agent_tasks.nightly_fitness_beat': {'queue': 'fitness'},
     'tasks.agent_tasks.clear_maintenance_mode': {'queue': 'fitness'},
+    'tasks.agent_tasks.evaluate_challenger': {'queue': 'fitness'},
+    'tasks.agent_tasks.write_session_memories': {'queue': 'memory'},
+    'tasks.agent_tasks.decay_memories': {'queue': 'memory'},
 }
 
 task_queues_max_priority = 10
@@ -32,5 +35,13 @@ beat_schedule = {
     'clear-maintenance-beat': {
         'task': 'tasks.agent_tasks.clear_maintenance_mode',
         'schedule': crontab(hour=1, minute=0),  # 01:00 UTC — clears maintenance flags
+    },
+    'evaluate-challenger-beat': {
+        'task': 'tasks.agent_tasks.evaluate_challenger',
+        'schedule': crontab(hour=3, minute=0),  # 03:00 UTC — champion/challenger evaluation
+    },
+    'decay-memories-beat': {
+        'task': 'tasks.agent_tasks.decay_memories',
+        'schedule': crontab(hour=2, minute=30),  # 02:30 UTC — memory decay
     },
 }

@@ -12,6 +12,7 @@ from app.agents.router import router as agents_router
 from app.evolution.router import router as evolution_router
 from app.auth.router import router as auth_router
 from app.analytics.router import router as analytics_router
+from app.evosmart.router import router as evosmart_router
 import app.agents.models  # noqa: F401 — registers models with SQLAlchemy metadata
 import app.workspaces.models  # noqa: F401 — registers Feedback and other workspace models
 import app.auth.models  # noqa: F401 — registers User model
@@ -27,7 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title='AgentEvo API',
+    title='evoagent.io API',
     description='AI Coding Partner — Single-agent workspace API',
     version='0.2.0',
     docs_url='/docs',
@@ -49,8 +50,9 @@ app.include_router(chat_router, prefix='/api/v1/workspaces', tags=['chat'])
 app.include_router(agents_router, prefix='/api/v1/agents', tags=['agents'])
 app.include_router(evolution_router, prefix='/api/v1/evolution', tags=['evolution'])
 app.include_router(analytics_router, prefix='/api/v1/events', tags=['analytics'])
+app.include_router(evosmart_router, prefix='/api/v1/evosmart', tags=['evosmart'])
 
 
 @app.get('/health', tags=['system'])
 async def health_check() -> dict:
-    return {'status': 'ok', 'service': 'agentevo-api', 'version': '0.2.0'}
+    return {'status': 'ok', 'service': 'evoagent-api', 'version': '0.2.0'}

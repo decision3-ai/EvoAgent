@@ -1,4 +1,5 @@
 import uuid
+import random
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,11 +8,17 @@ from sqlalchemy.orm import selectinload
 from typing import List, Optional
 
 import redis.asyncio as aioredis
+from celery import Celery as _Celery
 
 from app.core.config import settings
+
+# Lightweight Celery client — dispatches tasks by name without importing workers code
+# (Core must not import from Plugin per architecture rules)
+_celery = _Celery(broker=settings.REDIS_URL)
 from app.core.database import get_db
 from app.core.auth import get_current_user_id
 from app.workspaces.models import Workspace, AgentProfile, Session, Message, Feedback
+from app.analytics.models import AnalyticsEvent
 from app.workspaces.schemas import (
     WorkspaceCreate,
     WorkspaceUpdate,
@@ -47,6 +54,8 @@ async def create_workspace(
         **payload.model_dump(),
         owner_id=owner_id,
         is_default=is_first,
+        evo_points=20,
+        evo_points_updated_at=datetime.utcnow(),
     )
     db.add(workspace)
     await db.flush()
@@ -155,6 +164,25 @@ async def delete_workspace(
     await db.commit()
 
 
+@router.post('/{workspace_id}/evolve')
+async def trigger_evolution(
+    workspace_id: uuid.UUID,
+    owner_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    await _get_owned_workspace(workspace_id, owner_id, db)
+
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    try:
+        await r.set(f'evolution_status:{workspace_id}', 'queued', ex=86400)
+    finally:
+        await r.aclose()
+
+    _celery.send_task('tasks.agent_tasks.run_evolution', args=[str(workspace_id)])
+
+    return {'status': 'evolution_queued', 'workspace_id': str(workspace_id)}
+
+
 # ─── Agent Profile ────────────────────────────────────────────────────────────
 
 @router.get('/{workspace_id}/agent', response_model=AgentProfileResponse)
@@ -202,6 +230,15 @@ async def create_session(
     db.add(session)
     await db.commit()
     await db.refresh(session)
+
+    # 50/50 champion/challenger traffic split — persisted in Redis for 24h
+    variant = random.choice(['champion', 'challenger'])
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    try:
+        await r.set(f'session_variant:{session.id}', variant, ex=86400)
+    finally:
+        await r.aclose()
+
     return session
 
 
@@ -334,6 +371,28 @@ async def submit_feedback(
 
     # Fitness V2 phase 1: raw signed score (5=thumbs up → 1.0, 1=thumbs down → -1.0)
     msg.fitness_score = 1.0 if payload.score == 5 else -1.0
+
+    # EvoPoints V3.5: +10 for thumbs up
+    workspace = await _get_owned_workspace(workspace_id, owner_id, db)
+    if payload.score == 5:
+        workspace.evo_points = (workspace.evo_points or 0) + 10
+        workspace.evo_points_updated_at = datetime.utcnow()
+
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    try:
+        variant = await r.get(f'session_variant:{session_id}')
+    finally:
+        await r.aclose()
+    variant = variant or 'champion'
+
+    analytics_event = AnalyticsEvent(
+        workspace_id=workspace_id,
+        session_id=session_id,
+        message_id=message_id,
+        event_type='feedback',
+        event_metadata={'score': payload.score, 'variant': variant},
+    )
+    db.add(analytics_event)
 
     await db.commit()
     await db.refresh(feedback)

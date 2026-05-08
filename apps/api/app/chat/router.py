@@ -1,24 +1,20 @@
 """
-Chat router — the core of AgentEvo v1.
+Chat router — the core of evoagent.io v1.
 
 Calls Anthropic API with full session history.
 SSE streaming replaces this in the next sprint.
 """
-
-_VALID_MODELS = {
-    'claude-haiku-4-5-20251001',
-    'claude-sonnet-4-5-20250929',
-    'claude-sonnet-4-6',
-    'claude-opus-4-5-20251101',
-}
-_DEFAULT_MODEL = 'claude-haiku-4-5-20251001'
 
 import json
 import time
 import uuid
 import logging
 import anthropic
+import httpx
+import redis.asyncio as aioredis
+from typing import AsyncGenerator
 
+from celery import Celery as _Celery
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,9 +26,165 @@ from app.core.auth import get_current_user_id
 from app.workspaces.models import Workspace, Session, Message
 from app.workspaces.schemas import ChatRequest, ChatResponse, MessageResponse
 from app.workspaces.router import _get_owned_workspace, _get_session
+from app.memory.mem0_client import get_relevant_memories, save_memory
+from app.evolution.constitutional import apply_constitutional_rules
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+_OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+
+# Fallback chain: cheapest first, Anthropic as last resort
+_FALLBACK_CHAIN = [
+    {'provider': 'openrouter', 'model': 'deepseek/deepseek-chat'},
+    {'provider': 'openrouter', 'model': 'google/gemini-2.0-flash-001'},
+    {'provider': 'anthropic',  'model': 'claude-sonnet-4-6'},
+]
+
+
+async def _call_with_fallback(
+    messages: list[dict],
+    system_prompt: str,
+    max_tokens: int,
+) -> tuple[str, int, str]:
+    """Try each provider in order. Returns (text, tokens_used, model_used)."""
+    errors: list[str] = []
+    for entry in _FALLBACK_CHAIN:
+        provider = entry['provider']
+        model = entry['model']
+        try:
+            if provider == 'openrouter':
+                if not settings.OPENROUTER_API_KEY:
+                    continue
+                msgs = (
+                    [{'role': 'system', 'content': system_prompt}] if system_prompt else []
+                ) + messages
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    resp = await client.post(
+                        _OPENROUTER_URL,
+                        headers={
+                            'Authorization': f'Bearer {settings.OPENROUTER_API_KEY}',
+                            'Content-Type': 'application/json',
+                        },
+                        json={'model': model, 'messages': msgs, 'max_tokens': max_tokens},
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    text = data['choices'][0]['message']['content']
+                    usage = data.get('usage', {})
+                    tokens_used = (
+                        usage.get('prompt_tokens', 0) + usage.get('completion_tokens', 0)
+                    )
+            else:  # anthropic
+                ac = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+                api_resp = await ac.messages.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    system=system_prompt,
+                    messages=messages,
+                )
+                text = api_resp.content[0].text
+                tokens_used = api_resp.usage.input_tokens + api_resp.usage.output_tokens
+
+            logger.info('llm_call provider=%s model=%s tokens=%d', provider, model, tokens_used)
+            return text, tokens_used, model
+
+        except Exception as exc:
+            logger.warning('llm_provider_failed provider=%s model=%s error=%s', provider, model, exc)
+            errors.append(f'{model}: {exc}')
+
+    raise RuntimeError(f'All LLM providers failed: {"; ".join(errors)}')
+
+
+async def _stream_with_fallback(
+    messages: list[dict],
+    system_prompt: str,
+    max_tokens: int,
+) -> AsyncGenerator[tuple[str, str | None, int | None], None]:
+    """
+    Stream tokens with fallback chain. Yields tuples:
+      - ('token', text, None) for each token
+      - ('done', model_used, tokens_used) at end
+      - ('error', error_msg, None) if all providers fail
+    """
+    errors: list[str] = []
+
+    for entry in _FALLBACK_CHAIN:
+        provider = entry['provider']
+        model = entry['model']
+
+        try:
+            if provider == 'openrouter':
+                if not settings.OPENROUTER_API_KEY:
+                    continue
+
+                msgs = (
+                    [{'role': 'system', 'content': system_prompt}] if system_prompt else []
+                ) + messages
+                headers = {
+                    'Authorization': f'Bearer {settings.OPENROUTER_API_KEY}',
+                    'Content-Type': 'application/json',
+                }
+                body = {'model': model, 'messages': msgs, 'max_tokens': max_tokens, 'stream': True}
+
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    async with client.stream('POST', _OPENROUTER_URL, headers=headers, json=body) as resp:
+                        resp.raise_for_status()
+                        tokens_estimate = 0
+                        async for line in resp.aiter_lines():
+                            if not line.startswith('data: '):
+                                continue
+                            payload = line[6:]
+                            if payload.strip() == '[DONE]':
+                                break
+                            chunk = json.loads(payload)
+                            content = chunk['choices'][0]['delta'].get('content') or ''
+                            if content:
+                                tokens_estimate += len(content) // 4  # rough estimate
+                                yield ('token', content, None)
+
+                logger.info('llm_stream provider=%s model=%s', provider, model)
+                yield ('done', model, tokens_estimate)
+                return
+
+            else:  # anthropic
+                client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+                async with client.messages.stream(
+                    model=model,
+                    max_tokens=max_tokens,
+                    system=system_prompt,
+                    messages=messages,
+                ) as stream:
+                    async for text in stream.text_stream:
+                        yield ('token', text, None)
+
+                    final_msg = await stream.get_final_message()
+                    tokens_used = final_msg.usage.input_tokens + final_msg.usage.output_tokens
+
+                logger.info('llm_stream provider=%s model=%s tokens=%d', provider, model, tokens_used)
+                yield ('done', model, tokens_used)
+                return
+
+        except Exception as exc:
+            logger.warning('llm_stream_failed provider=%s model=%s error=%s', provider, model, exc)
+            errors.append(f'{model}: {exc}')
+
+    yield ('error', f'All providers failed: {"; ".join(errors)}', None)
+
+# Lightweight Celery client — dispatches tasks by name without importing worker code
+_celery = _Celery(broker=settings.REDIS_URL)
+
+
+async def _resolve_system_prompt(session_id: uuid.UUID, agent) -> str:
+    """Return challenger_prompt if this session was assigned the challenger variant, else champion."""
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    try:
+        variant = await r.get(f'session_variant:{session_id}')
+    finally:
+        await r.aclose()
+    if variant == 'challenger' and agent.challenger_prompt:
+        return agent.challenger_prompt
+    return agent.system_prompt or ''
 
 
 @router.post(
@@ -72,7 +224,16 @@ async def chat(
     )
     history = result.scalars().all()
 
-    system_prompt = agent.system_prompt or ''
+    system_prompt = await _resolve_system_prompt(session_id, agent)
+
+    # Retrieve relevant memories and prepend to system prompt
+    memories = await get_relevant_memories(str(agent.id), payload.message)
+    if memories:
+        mem_block = 'What I know about you:\n' + '\n'.join(f'- {m}' for m in memories)
+        system_prompt = (mem_block + '\n\n' + system_prompt) if system_prompt else mem_block
+
+    # Append constitutional rules (V3.5)
+    system_prompt = apply_constitutional_rules(system_prompt)
 
     # Only user/assistant roles go into messages array (Anthropic API requirement)
     chat_messages = [
@@ -81,19 +242,9 @@ async def chat(
         if m.role in ('user', 'assistant')
     ]
 
-    # Fallback to default if stored model is not a valid Anthropic model
-    model = agent.model if agent.model in _VALID_MODELS else _DEFAULT_MODEL
-
-    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-    api_response = await client.messages.create(
-        model=model,
-        max_tokens=agent.max_tokens,
-        system=system_prompt,
-        messages=chat_messages,
+    response_text, tokens_used, model_used = await _call_with_fallback(
+        chat_messages, system_prompt, agent.max_tokens,
     )
-
-    response_text = api_response.content[0].text
-    tokens_used = api_response.usage.input_tokens + api_response.usage.output_tokens
     latency_ms = int((time.monotonic() - start) * 1000)
 
     assistant_msg = Message(
@@ -102,7 +253,7 @@ async def chat(
         content=response_text,
         latency_ms=latency_ms,
         tokens_used=tokens_used,
-        artifacts=[],
+        artifacts=[{'model_used': model_used}],
     )
     db.add(assistant_msg)
 
@@ -113,6 +264,22 @@ async def chat(
     await db.commit()
     await db.refresh(user_msg)
     await db.refresh(assistant_msg)
+
+    # Persist this exchange to long-term memory (non-blocking, fails gracefully)
+    await save_memory(
+        str(workspace_id),
+        [{'role': 'user', 'content': payload.message}, {'role': 'assistant', 'content': response_text}],
+        str(agent.id),
+    )
+
+    # Extract and persist typed session memories (fire-and-forget Celery task)
+    _celery.send_task(
+        'tasks.agent_tasks.write_session_memories',
+        args=[str(workspace_id), str(session_id), [
+            {'role': 'user', 'content': payload.message},
+            {'role': 'assistant', 'content': response_text},
+        ]],
+    )
 
     return ChatResponse(
         user_message=MessageResponse.model_validate(user_msg),
@@ -159,11 +326,25 @@ async def chat_stream(
     ]
 
     # Capture all values needed inside the generator (no db session inside)
-    model = agent.model if agent.model in _VALID_MODELS else _DEFAULT_MODEL
-    system_prompt = agent.system_prompt or ''
+    system_prompt = await _resolve_system_prompt(session_id, agent)
     max_tokens = agent.max_tokens
     session_title = session.title
     user_msg_response = MessageResponse.model_validate(user_msg).model_dump(mode='json')
+
+    # Retrieve relevant memories and inject into system prompt
+    memories = await get_relevant_memories(str(agent.id), payload.message)
+    if memories:
+        mem_block = 'What I know about you:\n' + '\n'.join(f'- {m}' for m in memories)
+        system_prompt = (mem_block + '\n\n' + system_prompt) if system_prompt else mem_block
+
+    # Append constitutional rules (V3.5)
+    system_prompt = apply_constitutional_rules(system_prompt)
+
+    # Capture for memory save and task dispatch inside generator
+    workspace_id_str = str(workspace_id)
+    session_id_str = str(session_id)
+    agent_id_str = str(agent.id)
+    user_message_text = payload.message
 
     async def event_stream():
         # Event 1: confirm user message saved
@@ -171,27 +352,22 @@ async def chat_stream(
 
         full_text = ''
         start = time.monotonic()
+        tokens_used = 0
+        model_used = 'unknown'
 
-        try:
-            client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-            async with client.messages.stream(
-                model=model,
-                max_tokens=max_tokens,
-                system=system_prompt,
-                messages=chat_messages,
-            ) as stream:
-                async for text in stream.text_stream:
-                    full_text += text
-                    yield f'data: {json.dumps({"type": "token", "text": text})}\n\n'
-
-                final_msg = await stream.get_final_message()
-                tokens_used = (
-                    final_msg.usage.input_tokens + final_msg.usage.output_tokens
-                )
-        except Exception as e:
-            logger.error('Stream error: %s', e)
-            yield f'data: {json.dumps({"type": "error", "message": "Stream failed"})}\n\n'
-            return
+        async for event_type, payload, extra in _stream_with_fallback(
+            chat_messages, system_prompt, max_tokens
+        ):
+            if event_type == 'token':
+                full_text += payload
+                yield f'data: {json.dumps({"type": "token", "text": payload})}\n\n'
+            elif event_type == 'done':
+                model_used = payload
+                tokens_used = extra or 0
+            elif event_type == 'error':
+                logger.error('Stream fallback exhausted: %s', payload)
+                yield f'data: {json.dumps({"type": "error", "message": "Stream failed"})}\n\n'
+                return
 
         latency_ms = int((time.monotonic() - start) * 1000)
 
@@ -203,12 +379,28 @@ async def chat_stream(
                 content=full_text,
                 latency_ms=latency_ms,
                 tokens_used=tokens_used,
-                artifacts=[],
+                artifacts=[{'model_used': model_used}],
             )
             save_db.add(assistant_msg)
             await save_db.commit()
             await save_db.refresh(assistant_msg)
             assistant_response = MessageResponse.model_validate(assistant_msg).model_dump(mode='json')
+
+        # Persist this exchange to long-term memory (non-blocking, fails gracefully)
+        await save_memory(
+            workspace_id_str,
+            [{'role': 'user', 'content': user_message_text}, {'role': 'assistant', 'content': full_text}],
+            agent_id_str,
+        )
+
+        # Extract and persist typed session memories (fire-and-forget Celery task)
+        _celery.send_task(
+            'tasks.agent_tasks.write_session_memories',
+            args=[workspace_id_str, session_id_str, [
+                {'role': 'user', 'content': user_message_text},
+                {'role': 'assistant', 'content': full_text},
+            ]],
+        )
 
         # Event 3: done — send full assistant message for frontend state
         yield f'data: {json.dumps({"type": "done", "assistant_message": assistant_response, "session_title": session_title})}\n\n'

@@ -1,10 +1,12 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.auth import get_current_user_id
 from app.workspaces.models import Workspace
@@ -14,6 +16,17 @@ from app.analytics.schemas import EventCreate, EventResponse
 router = APIRouter()
 
 
+async def _get_session_variant(session_id: uuid.UUID | None) -> str:
+    if session_id is None:
+        return 'champion'
+    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    try:
+        variant = await r.get(f'session_variant:{session_id}')
+    finally:
+        await r.aclose()
+    return variant or 'champion'
+
+
 @router.post('/', response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 async def track_event(
     payload: EventCreate,
@@ -21,13 +34,14 @@ async def track_event(
     db: AsyncSession = Depends(get_db),
 ) -> AnalyticsEvent:
     # Verify workspace ownership
-    ws = await db.execute(
+    ws_result = await db.execute(
         select(Workspace).where(
             Workspace.id == payload.workspace_id,
             Workspace.owner_id == owner_id,
         )
     )
-    if ws.scalar_one_or_none() is None:
+    workspace = ws_result.scalar_one_or_none()
+    if workspace is None:
         raise HTTPException(status_code=404, detail='Workspace not found')
 
     if payload.event_type == 'code_copy':
@@ -59,12 +73,18 @@ async def track_event(
         if dupe.scalar() > 0:
             raise HTTPException(status_code=409, detail='Duplicate completion event for this session')
 
+    # EvoPoints V3.5: +3 for code_copy
+    if payload.event_type == 'code_copy':
+        workspace.evo_points = (workspace.evo_points or 0) + 3
+        workspace.evo_points_updated_at = datetime.now(UTC)
+
+    variant = await _get_session_variant(payload.session_id)
     event = AnalyticsEvent(
         workspace_id=payload.workspace_id,
         session_id=payload.session_id,
         message_id=payload.message_id,
         event_type=payload.event_type,
-        event_metadata=payload.event_metadata,
+        event_metadata={**payload.event_metadata, 'variant': variant},
     )
     db.add(event)
     await db.commit()

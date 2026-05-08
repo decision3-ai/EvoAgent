@@ -30,7 +30,7 @@ async def interact_with_agent(
 
     # Placeholder response — real LangGraph pipeline goes here in the next sprint
     output = (
-        f'[AgentEvo Gen-{agent.generation} | {agent.model}] '
+        f'[evoagent Gen-{agent.generation} | {agent.model}] '
         f'Echo: {payload.input}'
     )
 

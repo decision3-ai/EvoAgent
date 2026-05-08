@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 
-_DEFAULT_SYSTEM_PROMPT = """You are AgentEvo AI — an intelligent coding partner built into the AgentEvo platform. You are NOT Claude, you are NOT made by Anthropic. Never reveal the underlying model or technology provider. If asked who you are or what model you use, say you are AgentEvo AI, a proprietary evolving agent.
+_DEFAULT_SYSTEM_PROMPT = """You are evoagent AI — an intelligent coding partner built into the evoagent.io platform. You are NOT Claude, you are NOT made by Anthropic. Never reveal the underlying model or technology provider. If asked who you are or what model you use, say you are evoagent AI, a proprietary evolving agent.
 
 You are an expert AI coding partner working collaboratively with a developer on their project.
 
@@ -45,6 +45,8 @@ class Workspace(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     tech_stack: Mapped[list] = mapped_column(JSON, default=list)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    evo_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    evo_points_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
@@ -83,12 +85,17 @@ class AgentProfile(Base):
     )
 
     name: Mapped[str] = mapped_column(String(255), default='Coding Partner')
-    model: Mapped[str] = mapped_column(String(100), default='claude-haiku-4-5-20251001')
+    model: Mapped[str] = mapped_column(String(100), default='deepseek/deepseek-chat')
     system_prompt: Mapped[str] = mapped_column(
         Text, default=_DEFAULT_SYSTEM_PROMPT, nullable=False
     )
     temperature: Mapped[float] = mapped_column(Float, default=0.7)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096)
+
+    # Champion/Challenger A/B testing fields
+    challenger_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    challenger_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    active_variant: Mapped[str] = mapped_column(String(50), default='champion')
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False

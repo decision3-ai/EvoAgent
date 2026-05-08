@@ -1,28 +1,29 @@
-# AgentEvo.io — Project Context
+# evoagent.io — Project Context
 
 ## What We Are Building
 
 SaaS coding partner platform. One core AI agent per workspace works with the user through chat.
 
-**Tagline:** AI Agents That Learn and Evolve  
-**Owner:** Victor  
-**Stage:** V1 LIVE
+**Tagline:** AI Agents That Learn and Evolve
+**Owner:** Victor
+**Stage:** V3 LIVE
 
 ### Version ladder (product language)
 
-| Version | Codename | Meaning |
-|--------|----------|--------|
-| **V1** | **Evolution** | Shipped product: workspace → chat → plan/code/explain, SSE, settings, feedback captured. Evolution here means the agent improves through **conversation and context** with the user—not background genetic jobs. |
-| **V2** | **Fitness** | Background layer: formal scoring, workers, metrics, pipelines that turn feedback into measurable fitness (Celery, evolution plugin modules). |
-| **V3** | *TBD* | Reserved on the roadmap. |
-| **V4** | *TBD* | Reserved on the roadmap. |
+| Version | Codename | Status | Meaning |
+|---------|----------|--------|---------|
+| **V1** | **Evolution** | LIVE | Shipped product: workspace → chat → plan/code/explain, SSE, settings, feedback captured. Evolution here means the agent improves through **conversation and context** with the user. |
+| **V2** | **Fitness** | LIVE | Background layer: formal scoring, workers, metrics, pipelines that turn feedback into measurable fitness (Celery, evolution plugin modules). |
+| **V2.3** | **Champion vs Challenger** | LIVE | A/B testing for agent prompts—champion prompt vs challenger prompt, 50/50 traffic split, automatic evaluation. |
+| **V3** | **Persistent Memory** | LIVE | Agents remember across sessions via Mem0 + pgvector. Memory writer, retriever, decay. |
+| **V3.5** | **Constitutional** | NEXT | Constitutional Rules + Anti-sycophancy + EvoPoints gamification. |
+| **V4** | *TBD* | — | Reserved on the roadmap. |
 
 ---
 
-## V1 Scope (IN)
+## Current Live Features
 
-Everything the user directly sees and uses:
-
+### V1 — Evolution (user-facing execution)
 ```
 user → workspace → session → chat
 agent → plans, writes code, explains, iterates
@@ -31,56 +32,110 @@ SSE streaming
 settings affect agent behaviour
 ```
 
-**Features included in V1:**
+**Features:**
 - Email/password auth (JWT)
 - Workspace CRUD + agent profile settings
 - Chat with AI (streaming SSE)
 - Session management and history
 - PLAN / CODE / EXPLANATION response format
-- Feedback collection (thumbs up/down) — stored for **V2 Fitness**
+- Feedback collection (thumbs up/down)
 - Code block copy, max-height scroll
 - Workspace create/edit UI
 - Production deployment (Vercel + VPS)
 
 ---
 
-## Out of Scope for V1
+### V2.3 — Champion vs Challenger System
 
-Do NOT build, refactor toward, or couple with:
+A/B testing framework for agent prompt optimization.
 
-- NEAR wallet auth — dolazi u V2
-- Multi-agent system
-- Fitness **engine** (scoring pipeline, Celery workers) — **V2**
-- Automated genetic evolution jobs — **V2+**
-- LangGraph orchestration pipeline — **V2+**
-- NEAR smart contracts
-- Agent marketplace
-- Analytics dashboard
-- Clerk auth (not used — NEAR wallet only)
+**DB fields on `agent_profiles`:**
+- `challenger_prompt` — alternative system prompt being tested
+- `challenger_started_at` — timestamp when A/B test began
+- `active_variant` — which variant is currently serving (champion/challenger)
 
-These are **V2+** (Fitness and later waves) — they plug in later without touching V1 core.
+**Traffic split:**
+- 50/50 per session, stored in Redis with 24h TTL
+- Key pattern: `variant:{session_id}`
 
-**Rule:** If the user doesn't directly see it → it's not V1 core.
+**Analytics:**
+- Events track `variant` field in `event_metadata`
+- Enables comparing thumbs up/down rates per variant
+
+**Celery task:**
+- `evaluate_challenger` runs nightly at **03:00 UTC**
+- Compares fitness metrics, promotes challenger if it wins
 
 ---
 
-## Architecture Decision — Core vs Plugin
+### Pre-V3 — Async Evolution Pipeline
 
-### V1 CORE — Evolution (user-facing execution)
+Evolution jobs are now fire-and-forget via Celery.
+
+**How it works:**
+- `evolve_agent` is now `run_evolution` Celery task
+- Redis tracks status: `evolution_status:{workspace_id}` = `queued` | `running` | `done` | `failed`
+- Non-blocking for the user—evolution happens in background
+
+---
+
+### V3 — Persistent Memory (Mem0 + pgvector)
+
+Agents remember context across sessions.
+
+**DB table `agent_memories`:**
+```sql
+id              UUID PRIMARY KEY
+workspace_id    UUID REFERENCES workspaces(id)
+memory_type     VARCHAR  -- 'fact', 'preference', 'goal', 'context'
+content         TEXT
+importance_score FLOAT
+embedding       VECTOR(1536)  -- pgvector
+created_at      TIMESTAMP
+last_used_at    TIMESTAMP
+```
+
+**Memory Writer:**
+- `write_session_memories` Celery task runs after each session ends
+- Extracts facts, preferences, goals from conversation
+
+**Memory Retriever:**
+- `get_relevant_memories()` function
+- pgvector cosine similarity search
+- Multilingual embeddings via OpenAI `text-embedding-3-small`
+- Injected into agent context at chat time
+
+**Memory Decay:**
+- `decay_memories` Celery task runs nightly at **02:30 UTC**
+- Reduces `importance_score` over time
+- Skips `memory_type='goal'` (goals don't decay)
+
+---
+
+## Nightly Schedule (Celery Beat)
+
+| Time (UTC) | Task | Description |
+|------------|------|-------------|
+| **00:00** | `nightly_fitness_beat` | Maintenance window starts, fitness calculations |
+| **01:00** | `clear_maintenance_mode` | End maintenance window |
+| **02:30** | `decay_memories` | Memory decay (skips goals) |
+| **03:00** | `evaluate_challenger` | Champion vs Challenger evaluation |
+
+---
+
+## Architecture — Core vs Plugin
+
+### CORE — User-facing execution
 ```
 Task → Plan → Code → Explanation → Interaction
 ```
-Core modules: `workspaces/`, `chat/`  
-This is **V1 evolution**: iterative, in-session improvement—not the V2 fitness engine.
+Core modules: `workspaces/`, `chat/`, `memory/`
 
-### V2 PLUGIN LAYER — Fitness (background, user never sees)
+### PLUGIN LAYER — Background (user never sees)
 ```
-Feedback (from V1) → Fitness metrics → … → improved agent behaviour
+Feedback → Fitness metrics → Evolution → Memory extraction
 ```
-Plugin modules: `workers/`, `evolution/` (when V2 ships).
-
-### V3 / V4
-Roadmap slots only—split features (marketplace, NEAR contracts, analytics, etc.) when you define them.
+Plugin modules: `workers/`, `analytics/`
 
 **Hard rule:** Core does not import from Plugin. Plugin reads Core tables. No circular coupling.
 
@@ -94,7 +149,8 @@ Roadmap slots only—split features (marketplace, NEAR contracts, analytics, etc
 | Auth | Email/password (JWT) + NEAR wallet (V2) |
 | Backend API | FastAPI (Python 3.12) + SQLAlchemy async |
 | Database | PostgreSQL 16 + pgvector |
-| Cache / Queue | Redis 7 + Celery (workers only) |
+| Embeddings | OpenAI `text-embedding-3-small` |
+| Cache / Queue | Redis 7 + Celery + Celery Beat |
 | Package Manager | pnpm + Turborepo (monorepo) |
 | Containerization | Docker + Docker Compose |
 | Blockchain | NEAR Protocol (evoagent.testnet / evoagent.near) |
@@ -104,16 +160,23 @@ Roadmap slots only—split features (marketplace, NEAR contracts, analytics, etc
 ## Project Structure
 
 ```
-AgentEvo/
+evoagent.io/
 ├── apps/
-│   ├── web/          # Next.js 15 frontend (port 3000)
-│   ├── api/          # FastAPI backend (port 8000)
-│   └── workers/      # Celery background workers (V2)
+│   ├── web/              # Next.js 15 frontend (port 3000)
+│   ├── api/              # FastAPI backend (port 8000)
+│   │   └── app/
+│   │       ├── chat/     # Chat router, SSE streaming
+│   │       ├── workspaces/  # Workspace CRUD, agent profiles
+│   │       ├── memory/   # Memory writer, retriever, decay
+│   │       └── analytics/   # Event tracking, metrics
+│   └── workers/          # Celery background workers
+│       └── tasks/
+│           └── agent_tasks.py  # run_evolution, evaluate_challenger, etc.
 ├── infrastructure/
-│   └── docker/       # Dockerfiles per service
-├── migrations/       # Alembic migrations (inside apps/api/)
+│   └── docker/           # Dockerfiles per service
+├── migrations/           # Alembic migrations (inside apps/api/)
 ├── docker-compose.yml
-├── .env              # Real env vars — NEVER commit
+├── .env                  # Real env vars — NEVER commit
 └── .env.example
 ```
 
@@ -134,7 +197,7 @@ AgentEvo/
 
 ```bash
 # All services (Docker)
-cd ~/Documents/AgentEvo
+cd ~/Documents/evoagent.io
 docker-compose up -d
 
 # Frontend only
@@ -147,6 +210,12 @@ uvicorn app.main:app --reload --port 8000
 # Alembic migrations
 docker exec agentevo_api_1 alembic upgrade head
 docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
+
+# Celery worker (local)
+cd apps/workers && celery -A tasks worker --loglevel=info
+
+# Celery beat (scheduler)
+cd apps/workers && celery -A tasks beat --loglevel=info
 ```
 
 ---
@@ -180,27 +249,49 @@ docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
 
 ---
 
-## V1 Roadmap — Current Status
+## Roadmap — Current Status
 
-### Done ✅
+### V1 — Evolution COMPLETE
 - Auth (email/password JWT + parallel NEAR wallet support)
 - Workspace CRUD + agent profile settings
-- Workspace create/edit UI
-- Chat with AI (AgentEvo AI branding, no Claude/Anthropic mention)
+- Chat with AI (evoagent.io AI branding)
 - SSE streaming + fallback to sync
 - Session management + smart title generation
 - PLAN / CODE / EXPLANATION response format
+- Feedback collection (thumbs up/down -> DB)
 - Code block copy + max-height scroll + "Copy all code"
-- Feedback collection (thumbs up/down → DB)
 - Alembic migrations
-- Input UX polish
-- Deployment readiness (Dockerfile prod, standalone output, CORS)
+- Production deployment (Vercel + VPS)
 
-### Remaining for V1 launch
-- [ ] End-to-end smoke test on production
-- [ ] Agents page → real API (low priority, not blocking)
+### V2 — Fitness COMPLETE
+- Celery workers for background jobs
+- Fitness scoring pipeline
+- Analytics event tracking
+- Maintenance window (00:00-01:00 UTC)
 
-V2+ roadmap je u ROADMAP.md
+### V2.3 — Champion vs Challenger COMPLETE
+- A/B testing for agent prompts
+- 50/50 traffic split per session (Redis TTL 24h)
+- `evaluate_challenger` nightly task at 03:00 UTC
+- Variant tracking in analytics events
+
+### V3 — Persistent Memory COMPLETE
+- `agent_memories` table with pgvector embeddings
+- `write_session_memories` Celery task
+- `get_relevant_memories()` cosine similarity retrieval
+- `decay_memories` nightly task at 02:30 UTC
+
+### V3.5 — Constitutional NEXT
+- [ ] Constitutional Rules for agent behaviour
+- [ ] Anti-sycophancy measures
+- [ ] EvoPoints gamification system
+
+### Future (V4+)
+- Multi-agent system
+- LangGraph orchestration pipeline
+- NEAR smart contracts
+- Agent marketplace
+- Analytics dashboard
 
 ---
 
@@ -208,11 +299,11 @@ V2+ roadmap je u ROADMAP.md
 
 1. **Small tasks only** — one thing at a time, Victor executes and reports back
 2. **No large refactors** — if it touches more than ~8 files, split it or reconsider
-3. **No scope creep** — V2 features do not enter V1 code
+3. **No scope creep** — future version features do not enter current code
 4. **No new libraries** unless strictly necessary
-5. **Core stays clean** — workspaces/ and chat/ must not depend on workers/ or evolution/
+5. **Core stays clean** — workspaces/, chat/, memory/ must not depend on workers/
 6. **Always show** what file changed and why
-7. **Frontend deploy** — follow **Git & deploy cadence**: web changes → push to GitHub for Vercel; backend → only when agreed with Victor
+7. **Frontend deploy** — follow **Git & deploy cadence**: web changes -> push to GitHub for Vercel; backend -> only when agreed with Victor
 
 ---
 
@@ -222,13 +313,14 @@ V2+ roadmap je u ROADMAP.md
 - **Clerk is NOT used** — only in `.gitignore` as a leftover. Auth is NEAR wallet only.
 - **Model default:** All agent profiles default to `claude-haiku-4-5-20251001`. Fallback is hardcoded in `chat/router.py` for old records with invalid models.
 - **`--reload` flag removed** from `Dockerfile.api` for production.
+- **Memory embeddings:** Using OpenAI `text-embedding-3-small` for multilingual support.
 
 ---
 
 ## Strategic Contacts
 
-- **NEAR Labs** — contact when AgentEvo has active users + NEAR integration complete
-- **LangChain Inc.** — contact when AgentEvo has traction (building on their framework)
+- **NEAR Labs** — contact when evoagent.io has active users + NEAR integration complete
+- **LangChain Inc.** — contact when evoagent.io has traction (building on their framework)
 
 ---
 
@@ -237,3 +329,4 @@ V2+ roadmap je u ROADMAP.md
 - `.env` — never modify or commit real secrets
 - `pnpm-lock.yaml` — only update via `pnpm install`
 - NEAR contract IDs: `evoagent.testnet` (testnet), `evoagent.near` (mainnet)
+- `celerybeat-schedule` — auto-generated by Celery Beat
