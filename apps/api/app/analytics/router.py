@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime, timezone, UTC
 
-import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -9,6 +8,7 @@ from sqlalchemy import select, func
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.auth import get_current_user_id
+from app.core.redis import get_redis
 from app.workspaces.models import Workspace
 from app.analytics.models import AnalyticsEvent
 from app.analytics.schemas import EventCreate, EventResponse
@@ -19,11 +19,8 @@ router = APIRouter()
 async def _get_session_variant(session_id: uuid.UUID | None) -> str:
     if session_id is None:
         return 'champion'
-    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    try:
-        variant = await r.get(f'session_variant:{session_id}')
-    finally:
-        await r.aclose()
+    r = get_redis()
+    variant = await r.get(f'session_variant:{session_id}')
     return variant or 'champion'
 
 

@@ -1,23 +1,19 @@
 import uuid
 import random
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 
-import redis.asyncio as aioredis
-from celery import Celery as _Celery
-
 from app.core.config import settings
-
-# Lightweight Celery client — dispatches tasks by name without importing workers code
-# (Core must not import from Plugin per architecture rules)
-_celery = _Celery(broker=settings.REDIS_URL)
+from app.core.celery import celery_client
+from app.core.redis import get_redis
 from app.core.database import get_db
 from app.core.auth import get_current_user_id
 from app.workspaces.models import Workspace, AgentProfile, Session, Message, Feedback
+from app.workspaces.helpers import _get_owned_workspace, _get_session
 from app.analytics.models import AnalyticsEvent
 from app.workspaces.schemas import (
     WorkspaceCreate,
@@ -55,7 +51,7 @@ async def create_workspace(
         owner_id=owner_id,
         is_default=is_first,
         evo_points=20,
-        evo_points_updated_at=datetime.utcnow(),
+        evo_points_updated_at=datetime.now(UTC),
     )
     db.add(workspace)
     await db.flush()
@@ -106,11 +102,8 @@ async def get_workspace_status(
 ) -> dict:
     await _get_owned_workspace(workspace_id, owner_id, db)
 
-    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    try:
-        value = await r.get(f'maintenance:{workspace_id}')
-    finally:
-        await r.aclose()
+    r = get_redis()
+    value = await r.get(f'maintenance:{workspace_id}')
 
     now_utc = datetime.now(timezone.utc)
 
@@ -172,13 +165,10 @@ async def trigger_evolution(
 ) -> dict:
     await _get_owned_workspace(workspace_id, owner_id, db)
 
-    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    try:
-        await r.set(f'evolution_status:{workspace_id}', 'queued', ex=86400)
-    finally:
-        await r.aclose()
+    r = get_redis()
+    await r.set(f'evolution_status:{workspace_id}', 'queued', ex=86400)
 
-    _celery.send_task('tasks.agent_tasks.run_evolution', args=[str(workspace_id)])
+    celery_client.send_task('tasks.agent_tasks.run_evolution', args=[str(workspace_id)])
 
     return {'status': 'evolution_queued', 'workspace_id': str(workspace_id)}
 
@@ -233,11 +223,8 @@ async def create_session(
 
     # 50/50 champion/challenger traffic split — persisted in Redis for 24h
     variant = random.choice(['champion', 'challenger'])
-    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    try:
-        await r.set(f'session_variant:{session.id}', variant, ex=86400)
-    finally:
-        await r.aclose()
+    r = get_redis()
+    await r.set(f'session_variant:{session.id}', variant, ex=86400)
 
     return session
 
@@ -272,7 +259,7 @@ async def list_sessions(
 
 
 @router.get('/{workspace_id}/sessions/{session_id}', response_model=SessionResponse)
-async def get_session(
+async def get_session_endpoint(
     workspace_id: uuid.UUID,
     session_id: uuid.UUID,
     owner_id: str = Depends(get_current_user_id),
@@ -348,7 +335,7 @@ async def submit_feedback(
     owner_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> Feedback:
-    await _get_owned_workspace(workspace_id, owner_id, db)
+    workspace = await _get_owned_workspace(workspace_id, owner_id, db)
     await _get_session(session_id, workspace_id, db)
 
     result = await db.execute(
@@ -373,16 +360,12 @@ async def submit_feedback(
     msg.fitness_score = 1.0 if payload.score == 5 else -1.0
 
     # EvoPoints V3.5: +10 for thumbs up
-    workspace = await _get_owned_workspace(workspace_id, owner_id, db)
     if payload.score == 5:
         workspace.evo_points = (workspace.evo_points or 0) + 10
-        workspace.evo_points_updated_at = datetime.utcnow()
+        workspace.evo_points_updated_at = datetime.now(UTC)
 
-    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    try:
-        variant = await r.get(f'session_variant:{session_id}')
-    finally:
-        await r.aclose()
+    r = get_redis()
+    variant = await r.get(f'session_variant:{session_id}')
     variant = variant or 'champion'
 
     analytics_event = AnalyticsEvent(
@@ -397,41 +380,3 @@ async def submit_feedback(
     await db.commit()
     await db.refresh(feedback)
     return feedback
-
-
-# ─── Helpers ──────────────────────────────────────────────────────────────────
-
-async def _get_owned_workspace(
-    workspace_id: uuid.UUID,
-    owner_id: str,
-    db: AsyncSession,
-) -> Workspace:
-    result = await db.execute(
-        select(Workspace)
-        .options(selectinload(Workspace.agent_profile))
-        .where(
-            Workspace.id == workspace_id,
-            Workspace.owner_id == owner_id,
-        )
-    )
-    workspace = result.scalar_one_or_none()
-    if not workspace:
-        raise HTTPException(status_code=404, detail='Workspace not found')
-    return workspace
-
-
-async def _get_session(
-    session_id: uuid.UUID,
-    workspace_id: uuid.UUID,
-    db: AsyncSession,
-) -> Session:
-    result = await db.execute(
-        select(Session).where(
-            Session.id == session_id,
-            Session.workspace_id == workspace_id,
-        )
-    )
-    session = result.scalar_one_or_none()
-    if not session:
-        raise HTTPException(status_code=404, detail='Session not found')
-    return session

@@ -11,10 +11,8 @@ import uuid
 import logging
 import anthropic
 import httpx
-import redis.asyncio as aioredis
 from typing import AsyncGenerator
 
-from celery import Celery as _Celery
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,10 +21,12 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.core.database import get_db, AsyncSessionLocal
 from app.core.auth import get_current_user_id
+from app.core.celery import celery_client
+from app.core.redis import get_redis
 from app.workspaces.models import Workspace, Session, Message
 from app.workspaces.schemas import ChatRequest, ChatResponse, MessageResponse
-from app.workspaces.router import _get_owned_workspace, _get_session
-from app.memory.mem0_client import get_relevant_memories, save_memory
+from app.workspaces.helpers import _get_owned_workspace, _get_session
+from app.memory.mem0_client import get_relevant_memories
 from app.evolution.constitutional import apply_constitutional_rules
 
 logger = logging.getLogger(__name__)
@@ -171,17 +171,11 @@ async def _stream_with_fallback(
 
     yield ('error', f'All providers failed: {"; ".join(errors)}', None)
 
-# Lightweight Celery client — dispatches tasks by name without importing worker code
-_celery = _Celery(broker=settings.REDIS_URL)
-
 
 async def _resolve_system_prompt(session_id: uuid.UUID, agent) -> str:
     """Return challenger_prompt if this session was assigned the challenger variant, else champion."""
-    r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    try:
-        variant = await r.get(f'session_variant:{session_id}')
-    finally:
-        await r.aclose()
+    r = get_redis()
+    variant = await r.get(f'session_variant:{session_id}')
     if variant == 'challenger' and agent.challenger_prompt:
         return agent.challenger_prompt
     return agent.system_prompt or ''
@@ -265,15 +259,8 @@ async def chat(
     await db.refresh(user_msg)
     await db.refresh(assistant_msg)
 
-    # Persist this exchange to long-term memory (non-blocking, fails gracefully)
-    await save_memory(
-        str(workspace_id),
-        [{'role': 'user', 'content': payload.message}, {'role': 'assistant', 'content': response_text}],
-        str(agent.id),
-    )
-
     # Extract and persist typed session memories (fire-and-forget Celery task)
-    _celery.send_task(
+    celery_client.send_task(
         'tasks.agent_tasks.write_session_memories',
         args=[str(workspace_id), str(session_id), [
             {'role': 'user', 'content': payload.message},
@@ -340,10 +327,9 @@ async def chat_stream(
     # Append constitutional rules (V3.5)
     system_prompt = apply_constitutional_rules(system_prompt)
 
-    # Capture for memory save and task dispatch inside generator
+    # Capture for task dispatch inside generator
     workspace_id_str = str(workspace_id)
     session_id_str = str(session_id)
-    agent_id_str = str(agent.id)
     user_message_text = payload.message
 
     async def event_stream():
@@ -355,17 +341,17 @@ async def chat_stream(
         tokens_used = 0
         model_used = 'unknown'
 
-        async for event_type, payload, extra in _stream_with_fallback(
+        async for event_type, chunk, extra in _stream_with_fallback(
             chat_messages, system_prompt, max_tokens
         ):
             if event_type == 'token':
-                full_text += payload
-                yield f'data: {json.dumps({"type": "token", "text": payload})}\n\n'
+                full_text += chunk
+                yield f'data: {json.dumps({"type": "token", "text": chunk})}\n\n'
             elif event_type == 'done':
-                model_used = payload
+                model_used = chunk
                 tokens_used = extra or 0
             elif event_type == 'error':
-                logger.error('Stream fallback exhausted: %s', payload)
+                logger.error('Stream fallback exhausted: %s', chunk)
                 yield f'data: {json.dumps({"type": "error", "message": "Stream failed"})}\n\n'
                 return
 
@@ -386,15 +372,8 @@ async def chat_stream(
             await save_db.refresh(assistant_msg)
             assistant_response = MessageResponse.model_validate(assistant_msg).model_dump(mode='json')
 
-        # Persist this exchange to long-term memory (non-blocking, fails gracefully)
-        await save_memory(
-            workspace_id_str,
-            [{'role': 'user', 'content': user_message_text}, {'role': 'assistant', 'content': full_text}],
-            agent_id_str,
-        )
-
         # Extract and persist typed session memories (fire-and-forget Celery task)
-        _celery.send_task(
+        celery_client.send_task(
             'tasks.agent_tasks.write_session_memories',
             args=[workspace_id_str, session_id_str, [
                 {'role': 'user', 'content': user_message_text},

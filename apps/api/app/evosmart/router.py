@@ -9,16 +9,21 @@ Model: gemini-2.5-flash
 import logging
 
 import google.generativeai as genai
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.core.config import settings
+from app.core.auth import get_current_user_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _GEMINI_MODEL = 'gemini-2.5-flash'
 _TIMEOUT_SECONDS = 120
+
+# Configure once at module load — not on every request
+if settings.GEMINI_API_KEY:
+    genai.configure(api_key=settings.GEMINI_API_KEY)
 
 
 class HistoryMessage(BaseModel):
@@ -41,11 +46,12 @@ def _build_history(history: list[HistoryMessage]) -> list[dict]:
 
 
 @router.post('/chat')
-async def evosmart_chat(body: EvoSmartChatRequest) -> dict:
+async def evosmart_chat(
+    body: EvoSmartChatRequest,
+    _: str = Depends(get_current_user_id),
+) -> dict:
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail='GEMINI_API_KEY not configured')
-
-    genai.configure(api_key=settings.GEMINI_API_KEY)
 
     model = genai.GenerativeModel(
         model_name=_GEMINI_MODEL,
