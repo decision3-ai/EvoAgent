@@ -12,4 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["celery", "-A", "tasks", "worker", "--loglevel=info", "-Q", "evolution,fitness,celery"]
+CMD ["celery", "-A", "tasks", "worker", "--loglevel=info", "-Q", "evolution,fitness,memory,celery"]
