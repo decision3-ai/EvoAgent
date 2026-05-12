@@ -143,7 +143,7 @@ Stateless Gemini 2.5 Flash endpoint: `POST /api/v1/evosmart/chat` — no JWT req
 
 ## Roadmap
 
-See [ROADMAP.md](./ROADMAP.md) for full history and V4 candidates.
+See [ROADMAP.md](./ROADMAP.md) for full history and V4 plan.
 
 | Version | Status |
 |---|---|
@@ -152,7 +152,7 @@ See [ROADMAP.md](./ROADMAP.md) for full history and V4 candidates.
 | V2.3 — Champion vs Challenger | COMPLETE |
 | V3 — Persistent Memory | COMPLETE |
 | V3.5 — EvoSmart + Fallback + EvoPoints + Constitutional | COMPLETE |
-| V4 — Multi-agent / LangGraph / Marketplace | TBD |
+| V4 — NEAR wallet auth + smart contracts + multi-agent + Walrus/Sui storage | TBD |
 
 ---
 

@@ -89,14 +89,56 @@ Agents remember context across sessions via Mem0 + pgvector.
 
 ---
 
-## V4 — TBD
+## V4 — NEAR + Multi-agent + Walrus/Sui Storage
 
-Candidates:
-- Multi-agent system
-- LangGraph orchestration pipeline
-- NEAR smart contracts
-- Agent marketplace
-- Analytics dashboard
+### V4.1 — NEAR Wallet Auth (priority: foundation for everything below)
+
+Replace the current unsigned NEAR stub in `core/auth.py` with real cryptographic verification.
+
+**Backend:**
+- `POST /api/v1/auth/near/nonce` — generates a one-time nonce (Redis, 5min TTL)
+- `POST /api/v1/auth/near/verify` — verifies ed25519 signature, issues JWT with `sub=near:{account_id}`
+- `core/auth.py` — remove insecure pass-through; JWT is the only auth path
+- No new DB tables — `user_id` already supports any string (`near:alice.testnet` or `email@example.com`)
+
+**Frontend:**
+- `contexts/near-wallet.tsx` — `connectNear()`: nonce → `wallet.signMessage()` → verify → store JWT
+- `components/near/connect-wallet-button.tsx` — expose NEAR wallet button (currently hidden)
+
+**Target network:** testnet first (`evoagent.testnet`), one config swap to mainnet (`evoagent.near`)
+
+---
+
+### V4.2 — NEAR Smart Contracts
+
+- On-chain agent registry: workspace metadata anchored to NEAR
+- EvoPoints as on-chain tokens (FT standard)
+- Agent evolution events recorded on-chain (immutable audit trail)
+- Contract: `evoagent.near` (Rust, NEAR SDK)
+
+---
+
+### V4.3 — Agent Marketplace
+
+- Browse and deploy community agents
+- Agent ownership tied to NEAR account
+- Revenue sharing via smart contract
+
+---
+
+### V4.4 — Walrus/Sui Decentralized Storage
+
+- Agent memory and session data stored on Walrus (Sui-based decentralized storage)
+- User owns their data — stored under their NEAR/Sui key, not on our VPS
+- Fallback: keep PostgreSQL for hot/recent data, Walrus for long-term memory archive
+
+---
+
+### V4.5 — Multi-agent + LangGraph Orchestration
+
+- Multiple agents per workspace, task delegation
+- LangGraph pipeline for complex multi-step reasoning
+- Analytics dashboard (agent performance, fitness trends, EvoPoints history)
 
 ---
 
