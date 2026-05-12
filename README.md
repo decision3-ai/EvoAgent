@@ -2,35 +2,43 @@
 
 > AI Agents That Learn and Evolve — SaaS platform for building agents that grow smarter through every interaction.
 
+**Current version: V3.5 LIVE**
+
 ## Stack
 
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 15 (App Router) + TypeScript + Tailwind CSS |
 | Backend API | FastAPI (Python 3.12) + SQLAlchemy async |
-| Agent Engine | LangGraph + LangChain |
 | Database | PostgreSQL 16 + pgvector |
-| Cache / Queue | Redis 7 + Celery |
+| Embeddings | OpenAI `text-embedding-3-small` |
+| LLM Providers | OpenRouter (DeepSeek, Gemini) + Anthropic (fallback) + Google Gemini (EvoSmart) |
+| Cache / Queue | Redis 7 + Celery + Celery Beat |
 | Package Manager | pnpm + Turborepo (monorepo) |
 | Containerization | Docker + Docker Compose |
+| Blockchain | NEAR Protocol (reserved for V4) |
 
 ## Project Structure
 
 ```
-evoagent/
+evoagent.io/
 ├── apps/
-│   ├── web/          # Next.js frontend
-│   ├── api/          # FastAPI backend
-│   └── workers/      # Celery background workers
-├── packages/
-│   ├── ui/           # Shared React components (future)
-│   ├── types/        # Shared TypeScript types (future)
-│   └── config/       # Shared ESLint/TS configs (future)
+│   ├── web/              # Next.js 15 frontend (port 3000)
+│   ├── api/              # FastAPI backend (port 8000)
+│   │   └── app/
+│   │       ├── core/         # config, database, auth, celery, redis
+│   │       ├── chat/         # Chat router, SSE streaming, fallback chain
+│   │       ├── workspaces/   # Workspace CRUD, agent profiles, helpers
+│   │       ├── evosmart/     # Gemini direct route (stateless)
+│   │       ├── memory/       # mem0 client, retriever, embeddings
+│   │       ├── evolution/    # constitutional rules
+│   │       └── analytics/    # Event tracking, EvoPoints
+│   └── workers/          # Celery background workers
+│       └── tasks/
+│           └── agent_tasks.py
 ├── infrastructure/
-│   └── docker/       # Dockerfiles per service
-├── docs/             # Architecture Decision Records
-├── .github/
-│   └── workflows/    # CI/CD pipelines
+│   └── docker/           # Dockerfiles per service
+├── migrations/           # Alembic migrations
 ├── docker-compose.yml
 └── .env.example
 ```
@@ -46,7 +54,7 @@ evoagent/
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys (OpenAI, Anthropic)
+# Edit .env — required keys: OPENAI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY, GEMINI_API_KEY
 ```
 
 ### 2. Start all services with Docker
@@ -83,7 +91,12 @@ uvicorn app.main:app --reload --port 8000
 **Workers:**
 ```bash
 cd apps/workers
-celery -A tasks worker --loglevel=info
+celery -A tasks worker --loglevel=info -Q evolution,fitness,memory,celery
+```
+
+**DB migrations:**
+```bash
+docker exec agentevo_api_1 alembic upgrade head
 ```
 
 ## Core Concepts
@@ -96,26 +109,51 @@ Create Agent → Interact → Collect Feedback → Compute Fitness → Evolve �
 
 1. **Create** — Define an agent with a base model and system prompt
 2. **Interact** — Users chat with the agent; every exchange is stored
-3. **Feedback** — Users rate responses (thumbs up/down or 1–5 score)
+3. **Feedback** — Users rate responses (thumbs up/down)
 4. **Fitness** — Background worker computes a rolling fitness score
-5. **Evolve** — LangGraph pipeline refines the agent's prompt and behavior
-6. **Generation** — Each successful evolution increments the agent's `generation` counter
+5. **Evolve** — Agent prompt is refined; champion vs challenger A/B testing runs nightly
+6. **Memory** — Agent remembers facts, preferences, goals across sessions (pgvector)
 
-## Environment Variables
+## Architecture
 
-See `.env.example` for all required variables.
+### Core vs Plugin separation
+
+- **Core** (`api/`) — user-facing: workspaces, chat, memory, evosmart, evolution
+- **Plugin** (`workers/`) — background: fitness scoring, evolution pipeline, memory extraction
+- Hard rule: Core never imports from Plugin. Plugin reads Core tables.
+
+### Fallback Chain (chat router)
+
+```
+OpenRouter deepseek/deepseek-chat → OpenRouter google/gemini-2.0-flash-001 → Anthropic claude-sonnet-4-6
+```
+
+### EvoSmart
+
+Stateless Gemini 2.5 Flash endpoint: `POST /api/v1/evosmart/chat` — no JWT required, history passed by client.
+
+## Nightly Schedule (Celery Beat)
+
+| Time (UTC) | Task |
+|---|---|
+| 00:00 | `nightly_fitness_beat` — maintenance window starts |
+| 01:00 | `clear_maintenance_mode` |
+| 02:30 | `decay_memories` — memory decay (skips goals) |
+| 03:00 | `evaluate_challenger` — champion vs challenger evaluation |
 
 ## Roadmap
 
-- [x] Project skeleton & monorepo setup
-- [x] Authentication (NEAR wallet + Bearer token)
-- [ ] Agent CRUD UI
-- [ ] LangGraph evolution pipeline
-- [ ] Real-time interaction streaming (WebSockets)
-- [ ] Agent marketplace
-- [ ] Multi-agent orchestration
-- [ ] Analytics dashboard
+See [ROADMAP.md](./ROADMAP.md) for full history and V4 candidates.
+
+| Version | Status |
+|---|---|
+| V1 — Evolution | COMPLETE |
+| V2 — Fitness | COMPLETE |
+| V2.3 — Champion vs Challenger | COMPLETE |
+| V3 — Persistent Memory | COMPLETE |
+| V3.5 — EvoSmart + Fallback + EvoPoints + Constitutional | COMPLETE |
+| V4 — Multi-agent / LangGraph / Marketplace | TBD |
 
 ---
 
-Built with ❤️ by the evoagent.io team.
+Built with by the evoagent.io team.
