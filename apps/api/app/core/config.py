@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = 'HS256'
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
+    NEAR_NETWORK: str = 'testnet'  # 'testnet' | 'mainnet'
+
     ALLOWED_ORIGINS: List[str] = [
         'http://localhost:3000',
         'https://evoagent.io',

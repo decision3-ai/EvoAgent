@@ -11,6 +11,7 @@ from app.chat.router import router as chat_router
 from app.agents.router import router as agents_router
 from app.evolution.router import router as evolution_router
 from app.auth.router import router as auth_router
+from app.auth.near_router import router as near_auth_router
 from app.analytics.router import router as analytics_router
 from app.evosmart.router import router as evosmart_router
 import app.agents.models  # noqa: F401 — registers models with SQLAlchemy metadata
@@ -45,6 +46,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix='/api/v1', tags=['auth'])
+app.include_router(near_auth_router, prefix='/api/v1', tags=['auth'])
 app.include_router(workspaces_router, prefix='/api/v1/workspaces', tags=['workspaces'])
 app.include_router(chat_router, prefix='/api/v1/workspaces', tags=['chat'])
 app.include_router(agents_router, prefix='/api/v1/agents', tags=['agents'])

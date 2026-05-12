@@ -13,10 +13,11 @@ async def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> str:
     """
-    Dual-mode auth dependency.
+    Validate a Bearer JWT and return the subject (user_id).
 
-    - JWT token (starts with 'eyJ'): issued by /api/v1/auth/login — returns email as user_id.
-    - Anything else: treated as NEAR accountId (legacy V1 behaviour) — returned as-is.
+    Tokens are issued by:
+      - /api/v1/auth/login        → sub = email
+      - /api/v1/auth/near/verify  → sub = near:<account_id>
     """
     token = credentials.credentials.strip()
     if not token:
@@ -26,19 +27,15 @@ async def get_current_user_id(
             headers={'WWW-Authenticate': 'Bearer'},
         )
 
-    if token.startswith('eyJ'):
-        try:
-            payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-            user_id: str | None = payload.get('sub')
-            if not user_id:
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid token')
-            return user_id
-        except JWTError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Token expired or invalid',
-                headers={'WWW-Authenticate': 'Bearer'},
-            )
-
-    # NEAR accountId path — accept as-is (no signature validation in V1)
-    return token
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        user_id: str | None = payload.get('sub')
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid token')
+        return user_id
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Token expired or invalid',
+            headers={'WWW-Authenticate': 'Bearer'},
+        )
