@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useNearWallet } from '@/contexts/near-wallet'
 import { EmailAuthModal } from '@/components/auth/email-auth-modal'
 
@@ -13,18 +12,6 @@ type Props = {
 export function ConnectWalletButton({ className = '', variant = 'primary' }: Props) {
   const { accountId, isConnected, isLoading, isEmailAuth, isNearAuth, connect, disconnect } = useNearWallet()
   const [showEmailModal, setShowEmailModal] = useState(false)
-  const router = useRouter()
-  const hasMounted = useRef(false)
-
-  useEffect(() => {
-    if (!hasMounted.current) {
-      hasMounted.current = true
-      return
-    }
-    if (isConnected && accountId) {
-      router.push('/workspace')
-    }
-  }, [isConnected, accountId, router])
 
   if (isLoading) {
     return <div className={`h-9 w-36 rounded-lg bg-white/5 animate-pulse ${className}`} />

@@ -7,6 +7,7 @@ import React, {
   useState,
   useCallback,
 } from 'react'
+import { useRouter } from 'next/navigation'
 import type { WalletSelector } from '@near-wallet-selector/core'
 import { setupModal } from '@near-wallet-selector/modal-ui'
 import { initWalletSelector, AGENTEVO_CONTRACT_ID } from '@/lib/near'
@@ -51,6 +52,7 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
   const [wasSessionCleared, setWasSessionCleared] = useState(false)
   const [isEmailAuth, setIsEmailAuth] = useState(false)
   const [isNearAuth, setIsNearAuth] = useState(false)
+  const router = useRouter()
 
   // ── NEAR auth helpers ──────────────────────────────────────────────────────
 
@@ -81,6 +83,7 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
     setAccountId(data.access_token)
     setIsNearAuth(true)
     document.cookie = `near_account_id=${data.account_id}; path=/; SameSite=Lax`
+    router.push('/workspace')
   }
 
   async function initiateNearSign(selectorInstance: WalletSelector, walletAccountId: string) {

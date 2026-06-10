@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
 import { useNearWallet } from '@/contexts/near-wallet'
 
 type Mode = 'login' | 'register'
 
 export function EmailAuthModal({ onClose }: { onClose: () => void }) {
   const { loginWithEmail, registerWithEmail } = useNearWallet()
+  const router = useRouter()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,6 +29,7 @@ export function EmailAuthModal({ onClose }: { onClose: () => void }) {
         await registerWithEmail(email, password)
       }
       onClose()
+      router.push('/workspace')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
