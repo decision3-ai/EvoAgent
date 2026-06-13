@@ -135,7 +135,10 @@ profiles:
           attributes:
             vendor:
               nvidia:
-                - ram: 24Gi
+                - model: rtx3090
+                - model: a5000
+                - model: a6000
+                - model: a100
         storage:
           - size: 1Gi
           - name: ollamadata
@@ -174,23 +177,23 @@ profiles:
     dcloud:
       pricing:
         api:
-          denom: uakt
-          amount: 10000
+          denom: uact
+          amount: 5000
         workers:
-          denom: uakt
-          amount: 10000
+          denom: uact
+          amount: 5000
         celery-beat:
-          denom: uakt
-          amount: 10000
+          denom: uact
+          amount: 2000
         ollama:
-          denom: uakt
-          amount: 50000
+          denom: uact
+          amount: 100000
         postgres:
-          denom: uakt
-          amount: 10000
+          denom: uact
+          amount: 5000
         redis:
-          denom: uakt
-          amount: 10000
+          denom: uact
+          amount: 2000
 
 deployment:
   api:
