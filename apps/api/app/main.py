@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import engine
 from app.workspaces.router import router as workspaces_router
 from app.chat.router import router as chat_router
 from app.agents.router import router as agents_router
@@ -22,8 +22,6 @@ import app.analytics.models  # noqa: F401 — registers AnalyticsEvent model
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
 
