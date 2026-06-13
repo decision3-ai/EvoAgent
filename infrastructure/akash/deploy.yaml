@@ -1,0 +1,219 @@
+---
+# Akash SDL — EvoAgent full stack
+# Total: 4 CPU / 10.5Gi RAM / 116Gi storage / 1x NVIDIA GPU (24Gi VRAM)
+#
+# WARNING: env values in this file are sent to the Akash provider in plaintext.
+# Fill in the CHANGEME values right before `akash tx deployment create`,
+# and never commit real secrets to git.
+version: "2.0"
+
+services:
+  api:
+    image: victordflos/evoagent-api:latest
+    expose:
+      - port: 8000
+        as: 80
+        to:
+          - global: true
+    env:
+      - DATABASE_URL=postgresql+asyncpg://agentevo:CHANGEME_PG_PASSWORD@postgres:5432/agentevo_db
+      - REDIS_URL=redis://redis:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - SECRET_KEY=CHANGEME_JWT_SECRET
+      - OPENROUTER_API_KEY=CHANGEME
+      - GEMINI_API_KEY=CHANGEME
+
+  workers:
+    image: victordflos/evoagent-workers:latest
+    env:
+      - DATABASE_URL=postgresql+asyncpg://agentevo:CHANGEME_PG_PASSWORD@postgres:5432/agentevo_db
+      - REDIS_URL=redis://redis:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OPENROUTER_API_KEY=CHANGEME
+
+  celery-beat:
+    # Same image as workers — only the command differs
+    image: victordflos/evoagent-workers:latest
+    command:
+      - celery
+    args:
+      - "-A"
+      - tasks
+      - beat
+      - "--loglevel=info"
+      - "--scheduler"
+      - "celery.beat:PersistentScheduler"
+    env:
+      - REDIS_URL=redis://redis:6379/0
+
+  ollama:
+    image: ollama/ollama:latest
+    command:
+      - /bin/sh
+      - -c
+    args:
+      # Start the server, then pull models once it is up
+      - "ollama serve & sleep 10 && ollama pull nomic-embed-text && ollama pull qwen3.6:27b && wait"
+    expose:
+      - port: 11434
+        to:
+          - service: api
+          - service: workers
+    params:
+      storage:
+        ollamadata:
+          mount: /root/.ollama
+          readOnly: false
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    expose:
+      - port: 5432
+        to:
+          - service: api
+          - service: workers
+          - service: celery-beat
+    env:
+      - POSTGRES_USER=agentevo
+      - POSTGRES_PASSWORD=CHANGEME_PG_PASSWORD
+      - POSTGRES_DB=agentevo_db
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    params:
+      storage:
+        pgdata:
+          mount: /var/lib/postgresql/data
+          readOnly: false
+
+  redis:
+    image: redis:7-alpine
+    expose:
+      - port: 6379
+        to:
+          - service: api
+          - service: workers
+          - service: celery-beat
+    params:
+      storage:
+        redisdata:
+          mount: /data
+          readOnly: false
+
+profiles:
+  compute:
+    api:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 2.5Gi
+        storage:
+          - size: 4Gi
+    workers:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 1.5Gi
+        storage:
+          - size: 4Gi
+    celery-beat:
+      resources:
+        cpu:
+          units: 0.25
+        memory:
+          size: 512Mi
+        storage:
+          - size: 2Gi
+    ollama:
+      resources:
+        cpu:
+          units: 0.75
+        memory:
+          size: 4Gi
+        gpu:
+          units: 1
+          attributes:
+            vendor:
+              nvidia:
+                - ram: 24Gi
+        storage:
+          - size: 1Gi
+          - name: ollamadata
+            size: 25Gi
+            attributes:
+              persistent: true
+              class: beta3
+    postgres:
+      resources:
+        cpu:
+          units: 0.75
+        memory:
+          size: 1.5Gi
+        storage:
+          - size: 1Gi
+          - name: pgdata
+            size: 70Gi
+            attributes:
+              persistent: true
+              class: beta3
+    redis:
+      resources:
+        cpu:
+          units: 0.25
+        memory:
+          size: 512Mi
+        storage:
+          - size: 1Gi
+          - name: redisdata
+            size: 8Gi
+            attributes:
+              persistent: true
+              class: beta3
+
+  placement:
+    dcloud:
+      pricing:
+        api:
+          denom: uakt
+          amount: 10000
+        workers:
+          denom: uakt
+          amount: 10000
+        celery-beat:
+          denom: uakt
+          amount: 10000
+        ollama:
+          denom: uakt
+          amount: 50000
+        postgres:
+          denom: uakt
+          amount: 10000
+        redis:
+          denom: uakt
+          amount: 10000
+
+deployment:
+  api:
+    dcloud:
+      profile: api
+      count: 1
+  workers:
+    dcloud:
+      profile: workers
+      count: 1
+  celery-beat:
+    dcloud:
+      profile: celery-beat
+      count: 1
+  ollama:
+    dcloud:
+      profile: ollama
+      count: 1
+  postgres:
+    dcloud:
+      profile: postgres
+      count: 1
+  redis:
+    dcloud:
+      profile: redis
+      count: 1
