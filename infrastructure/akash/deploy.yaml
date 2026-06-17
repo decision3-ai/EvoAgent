@@ -136,9 +136,11 @@ profiles:
             vendor:
               nvidia:
                 - model: rtx3090
+                - model: rtx4090
                 - model: a5000
                 - model: a6000
                 - model: a100
+                - model: a40
         storage:
           - size: 1Gi
           - name: ollamadata
