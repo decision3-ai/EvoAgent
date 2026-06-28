@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import uuid
@@ -16,7 +17,7 @@ from sqlalchemy import Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from pgvector.sqlalchemy import Vector
 from langgraph.graph import StateGraph, START, END
-from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 from tasks import app
 
@@ -29,7 +30,20 @@ _DATABASE_URL = os.getenv(
     'postgresql+asyncpg://agentevo:agentevo_secret@postgres:5432/agentevo_db',
 ).replace('postgresql+asyncpg://', 'postgresql+psycopg2://')
 
-_EVOLUTION_MODEL = os.getenv('EVOLUTION_MODEL', 'claude-haiku-4-5-20251001')
+_EVOLUTION_MODEL = os.getenv('EVOLUTION_MODEL', 'anthropic/claude-haiku-4.5')
+_OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
+_OLLAMA_BASE = os.getenv('OLLAMA_BASE_URL', 'http://ollama:11434')
+
+
+def _evolution_llm(temperature: float, max_tokens: int) -> ChatOpenAI:
+    """Evolution/extraction LLM — Claude via OpenRouter (OpenAI-compatible)."""
+    return ChatOpenAI(
+        model=_EVOLUTION_MODEL,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        base_url=_OPENROUTER_BASE,
+        api_key=os.getenv('OPENROUTER_API_KEY', ''),
+    )
 
 # Per-process flag — avoids re-running idempotent DDL on every task call
 _schema_ready = False
@@ -109,6 +123,8 @@ class _EvolutionHistory(_Base):
     fitness_score: Mapped[float] = mapped_column(Float, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     recorded_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    baseline_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    evolved_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class _AgentMemory(_Base):
@@ -121,7 +137,7 @@ class _AgentMemory(_Base):
     memory_type: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     importance_score: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
-    embedding = mapped_column(Vector(1536), nullable=True)
+    embedding = mapped_column(Vector(768), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -164,17 +180,19 @@ def _get_mem0_client_sync():
         from mem0 import Memory  # lazy import — not always needed
         config = {
             'llm': {
-                'provider': 'anthropic',
+                'provider': 'openai',  # OpenRouter is OpenAI-compatible
                 'config': {
-                    'model': 'claude-haiku-4-5-20251001',
-                    'api_key': os.getenv('ANTHROPIC_API_KEY', ''),
+                    'model': _EVOLUTION_MODEL,
+                    'api_key': os.getenv('OPENROUTER_API_KEY', ''),
+                    'openai_base_url': _OPENROUTER_BASE,
                 },
             },
             'embedder': {
-                'provider': 'openai',
+                'provider': 'openai',  # Ollama is OpenAI-compatible
                 'config': {
-                    'api_key': os.getenv('OPENAI_API_KEY', ''),
-                    'model': 'text-embedding-3-small',
+                    'api_key': 'ollama',
+                    'model': 'nomic-embed-text',
+                    'openai_base_url': f'{_OLLAMA_BASE}/v1',
                 },
             },
             'vector_store': {
@@ -182,7 +200,7 @@ def _get_mem0_client_sync():
                 'config': {
                     **_parse_mem0_db_url(),
                     'collection_name': 'agent_memories',
-                    'embedding_model_dims': 1536,
+                    'embedding_model_dims': 768,
                 },
             },
         }
@@ -196,32 +214,35 @@ def _mem0_save_sync(workspace_id: str, messages: list, agent_id: str) -> None:
     client.add(messages, user_id=f'{workspace_id}:{agent_id}')
 
 
-# OpenAI client for embedding generation (sync)
-_openai_client_sync: Optional[openai.OpenAI] = None
+# Embedding client — Ollama via its OpenAI-compatible /v1 endpoint (sync)
+_embed_client_sync: Optional[openai.OpenAI] = None
 
 
-def _get_openai_client_sync() -> openai.OpenAI:
-    """Lazy singleton for sync OpenAI client."""
-    global _openai_client_sync
-    if _openai_client_sync is None:
-        _openai_client_sync = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY', ''))
-    return _openai_client_sync
+def _get_embed_client_sync() -> openai.OpenAI:
+    """Lazy singleton for sync Ollama embedding client (OpenAI-compatible API)."""
+    global _embed_client_sync
+    if _embed_client_sync is None:
+        _embed_client_sync = openai.OpenAI(
+            base_url=f'{_OLLAMA_BASE}/v1',
+            api_key='ollama',  # required by client, ignored by Ollama
+        )
+    return _embed_client_sync
 
 
 def _embed_text_sync(text: str) -> Optional[List[float]]:
     """
-    Generate embedding vector for text using OpenAI text-embedding-3-small (sync).
-    Returns 1536-dimensional vector or None on error.
+    Generate embedding vector for text using Ollama nomic-embed-text (sync).
+    Returns 768-dimensional vector or None on error.
     """
     try:
-        client = _get_openai_client_sync()
+        client = _get_embed_client_sync()
         response = client.embeddings.create(
-            model='text-embedding-3-small',
+            model='nomic-embed-text',
             input=text,
         )
         return response.data[0].embedding
     except Exception:
-        logger.exception('OpenAI embedding failed')
+        logger.exception('Ollama embedding failed')
         return None
 
 
@@ -261,6 +282,14 @@ def _ensure_schema(engine) -> None:
             'ALTER TABLE evolution_history '
             'ADD COLUMN IF NOT EXISTS notes TEXT;'
         ))
+        conn.execute(text(
+            'ALTER TABLE evolution_history '
+            'ADD COLUMN IF NOT EXISTS baseline_hash VARCHAR(64);'
+        ))
+        conn.execute(text(
+            'ALTER TABLE evolution_history '
+            'ADD COLUMN IF NOT EXISTS evolved_hash VARCHAR(64);'
+        ))
         conn.commit()
     _schema_ready = True
     logger.info('[Schema] Evolution schema ensured.')
@@ -279,7 +308,7 @@ class _EvolutionState(TypedDict):
 
 def _analyze_weaknesses(state: _EvolutionState) -> dict:
     """Node 1: identify patterns in low-rated responses."""
-    llm = ChatAnthropic(model=_EVOLUTION_MODEL, temperature=0, max_tokens=1024)
+    llm = _evolution_llm(temperature=0, max_tokens=1024)
 
     feedback_text = '\n'.join(f'- {item}' for item in state['feedback_items'])
 
@@ -298,7 +327,7 @@ def _analyze_weaknesses(state: _EvolutionState) -> dict:
 
 def _generate_improved_prompt(state: _EvolutionState) -> dict:
     """Node 2: rewrite system_prompt to address identified weaknesses."""
-    llm = ChatAnthropic(model=_EVOLUTION_MODEL, temperature=0.3, max_tokens=2048)
+    llm = _evolution_llm(temperature=0.3, max_tokens=2048)
 
     prompt = (
         'You are an expert at writing system prompts for AI coding assistants.\n\n'
@@ -378,6 +407,9 @@ def evolve_agent(self, agent_id: str) -> dict:
 
             logger.info('[EvolveTask] Running LangGraph pipeline for agent %s (%d weak items)', agent_id, len(feedback_items))
 
+            # Hash baseline prompt before evolution
+            baseline_hash = hashlib.sha256(profile.system_prompt.encode()).hexdigest()
+
             pipeline = _build_evolution_graph()
             result = pipeline.invoke({
                 'current_prompt': profile.system_prompt,
@@ -391,12 +423,32 @@ def evolve_agent(self, agent_id: str) -> dict:
                 logger.warning('[EvolveTask] Pipeline returned empty prompt for agent %s', agent_id)
                 return {'status': 'empty_result', 'agent_id': agent_id}
 
+            # Hash evolved prompt and verify real change occurred
+            evolved_hash = hashlib.sha256(improved_prompt.encode()).hexdigest()
+            if evolved_hash == baseline_hash:
+                logger.info(
+                    '[EvolveTask] evolution_noop for agent %s — prompt unchanged (hash=%s)',
+                    agent_id, baseline_hash,
+                )
+                return {'status': 'evolution_noop', 'agent_id': agent_id, 'hash': baseline_hash}
+
+            # Real change confirmed — persist new prompt and record hashes
             profile.system_prompt = improved_prompt
             profile.updated_at = datetime.utcnow()
+
+            session.add(_EvolutionHistory(
+                id=uuid.uuid4(),
+                agent_profile_id=profile.id,
+                fitness_score=0.0,
+                notes='evolution_applied',
+                recorded_at=datetime.utcnow(),
+                baseline_hash=baseline_hash,
+                evolved_hash=evolved_hash,
+            ))
             session.commit()
 
         logger.info('[EvolveTask] Evolution complete for agent %s', agent_id)
-        return {'status': 'evolved', 'agent_id': agent_id}
+        return {'status': 'evolved', 'agent_id': agent_id, 'baseline_hash': baseline_hash, 'evolved_hash': evolved_hash}
 
     except Exception as exc:
         logger.error('[EvolveTask] Failed for agent %s: %s', agent_id, exc, exc_info=True)
@@ -912,7 +964,7 @@ def write_session_memories(self, workspace_id: str, session_id: str, messages: l
             )
 
             # 4. LLM extraction of typed memory candidates
-            llm = ChatAnthropic(model=_EVOLUTION_MODEL, temperature=0, max_tokens=512)
+            llm = _evolution_llm(temperature=0, max_tokens=512)
             extraction_prompt = (
                 'Analyze this coding assistant conversation exchange.\n\n'
                 f'Exchange:\n{session_excerpt}\n\n'
