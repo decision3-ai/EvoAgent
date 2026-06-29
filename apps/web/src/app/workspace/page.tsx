@@ -3,9 +3,24 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { BrandIcon } from '@/components/brand-icon'
 import { useNearWallet } from '@/contexts/near-wallet'
 import { fetchWorkspaces, type Workspace } from '@/lib/api-client'
+
+const NOISE_BG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E")`
+
+const glassCard: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: '20px',
+  padding: '28px',
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+}
+
+const capabilities = [
+  { icon: '⚡', title: 'Codes', text: 'Writes, debugs, and explains across any stack.' },
+  { icon: '🧠', title: 'Learns', text: 'Remembers your patterns. Gets better every session.' },
+  { icon: '🔄', title: 'Evolves', text: 'Powered by Decision3. Your agent improves itself.' },
+]
 
 export default function WorkspacePage() {
   const { accountId, isConnected, isLoading } = useNearWallet()
@@ -23,10 +38,6 @@ export default function WorkspacePage() {
 
     fetchWorkspaces(accountId)
       .then((ws) => {
-        if (ws.length === 0) {
-          router.replace('/workspace/new')
-          return
-        }
         setWorkspaces(ws)
         setReady(true)
       })
@@ -37,12 +48,12 @@ export default function WorkspacePage() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-violet-600 animate-pulse shadow-lg shadow-fuchsia-500/20" />
-          <div className="space-y-2 w-40">
-            <div className="h-2 rounded-full bg-white/10 animate-pulse" />
-            <div className="h-2 rounded-full bg-white/10 animate-pulse w-3/4 mx-auto" />
+      <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.08)' }} />
+          <div style={{ width: '160px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ height: '8px', borderRadius: '99px', background: 'rgba(255,255,255,0.08)' }} />
+            <div style={{ height: '8px', borderRadius: '99px', background: 'rgba(255,255,255,0.05)', width: '75%', margin: '0 auto' }} />
           </div>
         </div>
       </div>
@@ -50,130 +61,234 @@ export default function WorkspacePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white pb-24 md:pb-0">
-      <div className="max-w-4xl mx-auto px-6 py-12">
+    <div
+      className="pb-24 md:pb-0"
+      style={{ minHeight: '100vh', background: '#000', backgroundImage: NOISE_BG, color: 'white' }}
+    >
+      <div style={{ maxWidth: '896px', margin: '0 auto', padding: '48px 24px' }}>
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-10">
-          <div className="flex items-center gap-3">
-            {/* Hamburger menu (mobile only) */}
-            <button className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button className="md:hidden" style={{ padding: '8px', marginLeft: '-8px', color: 'rgba(156,163,175,1)', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <svg style={{ width: '24px', height: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <BrandIcon className="h-9 w-9" />
-            <span className="font-semibold text-lg tracking-tight">EVOAGENT</span>
+            <img src="/2.png" alt="EvoAgent" style={{ height: '80px', width: 'auto', objectFit: 'contain' }} />
           </div>
           <Link
             href="/workspace/new"
-            className="flex items-center gap-2 bg-fuchsia-500 hover:bg-fuchsia-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-lg shadow-fuchsia-500/25 hover:-translate-y-0.5"
+            className="flex items-center gap-2 transition-all"
+            style={{
+              padding: '8px 16px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: 'white',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)',
+              marginRight: '16px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+            }}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             New Workspace
           </Link>
         </div>
 
-        <h1 className="text-2xl font-bold mb-1">Your Workspaces</h1>
-        <p className="text-gray-400 text-sm mb-8">
-          Each workspace has its own coding partner, session history, and context.
-        </p>
+        {workspaces.length === 0 ? (
+          /* ── Empty state ──────────────────────────────────────────────── */
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: '48px', paddingBottom: '32px', gap: '40px' }}>
 
-        {/* Workspace grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {workspaces.map((ws) => (
+            {/* Hero text */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <h1 style={{
+                fontSize: '3.5rem',
+                fontWeight: '800',
+                letterSpacing: '-0.02em',
+                margin: 0,
+                background: 'linear-gradient(180deg, #fff 60%, rgba(255,255,255,0.7) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                Your agent is ready.
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem', maxWidth: '360px', lineHeight: '1.6', margin: 0 }}>
+                Create a workspace. It starts learning from your first message.
+              </p>
+            </div>
+
+            {/* CTA */}
             <Link
-              key={ws.id}
-              href={`/workspace/${ws.id}`}
-              className="group bg-white/5 border border-white/10 hover:border-fuchsia-500/40 hover:bg-white/[0.07] rounded-2xl p-5 transition-all"
+              href="/workspace/new"
+              className="flex items-center justify-center gap-2 transition-all"
+              style={{
+                width: '320px',
+                height: '56px',
+                background: 'rgba(255,255,255,0.95)',
+                color: '#000',
+                fontWeight: '700',
+                fontSize: '1rem',
+                borderRadius: '14px',
+                boxShadow: '0 0 40px rgba(255,255,255,0.15)',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'white'
+                e.currentTarget.style.boxShadow = '0 0 60px rgba(255,255,255,0.25)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.95)'
+                e.currentTarget.style.boxShadow = '0 0 40px rgba(255,255,255,0.15)'
+              }}
             >
-              {/* Icon + name */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 shadow-md ring-1 ring-white/10">
-                    <img src="/2.png" alt="" className="h-full w-full object-cover" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-sm group-hover:text-fuchsia-300 transition-colors">
-                      {ws.name}
-                    </h2>
-                    {ws.is_default && (
-                      <span className="text-xs text-gray-500">Default</span>
-                    )}
-                  </div>
-                </div>
-                <svg
-                  className="w-4 h-4 text-gray-600 group-hover:text-fuchsia-400 transition-colors mt-0.5 shrink-0"
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-
-              {/* Description */}
-              {ws.description && (
-                <p className="text-xs text-gray-400 mb-3 leading-relaxed line-clamp-2">
-                  {ws.description}
-                </p>
-              )}
-
-              {/* EvoPoints */}
-              {ws.evo_points > 0 && (
-                <div className="flex items-center gap-1.5 mb-3">
-                  <span className="text-xs font-semibold text-fuchsia-400 bg-fuchsia-500/10 border border-fuchsia-500/20 px-2 py-0.5 rounded-full">
-                    ⚡ {ws.evo_points} EP
-                  </span>
-                </div>
-              )}
-
-              {/* Tech stack */}
-              {ws.tech_stack.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {ws.tech_stack.slice(0, 5).map((tech) => (
-                    <span
-                      key={tech}
-                      className="text-xs bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-400"
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                  {ws.tech_stack.length > 5 && (
-                    <span className="text-xs text-gray-600">+{ws.tech_stack.length - 5}</span>
-                  )}
-                </div>
-              )}
+              <span>⚡</span> Create your first workspace
             </Link>
-          ))}
-        </div>
+
+            {/* Capability cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', width: '100%', maxWidth: '672px' }}>
+              {capabilities.map((card) => (
+                <div key={card.title} style={glassCard}>
+                  <div style={{ fontSize: '2rem', marginBottom: '16px' }}>{card.icon}</div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'white', marginBottom: '8px', margin: '0 0 8px 0' }}>{card.title}</h3>
+                  <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)', lineHeight: '1.6', margin: 0 }}>{card.text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem', margin: 0 }}>
+              Powered by Decision3 · Trust is only earned in the open.
+            </p>
+          </div>
+
+        ) : (
+          /* ── Workspace list ───────────────────────────────────────────── */
+          <>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '4px' }}>Your Workspaces</h1>
+            <p style={{ color: 'rgba(156,163,175,1)', fontSize: '14px', marginBottom: '32px' }}>
+              Your evolving agent. Codes, learns, remembers — powered by Decision3.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+              {workspaces.map((ws) => (
+                <Link
+                  key={ws.id}
+                  href={`/workspace/${ws.id}`}
+                  className="group transition-all"
+                  style={{
+                    display: 'block',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)',
+                    textDecoration: 'none',
+                    color: 'white',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)'
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, boxShadow: '0 0 0 1px rgba(255,255,255,0.1)' }}>
+                        <img src="/2.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <div>
+                        <h2 style={{ fontWeight: '600', fontSize: '14px', color: 'white', margin: 0 }}>{ws.name}</h2>
+                        {ws.is_default && (
+                          <span style={{ fontSize: '12px', color: 'rgba(107,114,128,1)' }}>Default</span>
+                        )}
+                      </div>
+                    </div>
+                    <svg style={{ width: '16px', height: '16px', color: 'rgba(75,85,99,1)', flexShrink: 0, marginTop: '2px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+
+                  {ws.description && (
+                    <p style={{ fontSize: '12px', color: 'rgba(156,163,175,1)', marginBottom: '12px', lineHeight: '1.6', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {ws.description}
+                    </p>
+                  )}
+
+                  {ws.evo_points > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: 'rgba(209,213,219,1)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '99px' }}>
+                        ⚡ {ws.evo_points} EP
+                      </span>
+                    </div>
+                  )}
+
+                  {ws.tech_stack.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {ws.tech_stack.slice(0, 5).map((tech) => (
+                        <span key={tech} style={{ fontSize: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px', color: 'rgba(156,163,175,1)' }}>
+                          {tech}
+                        </span>
+                      ))}
+                      {ws.tech_stack.length > 5 && (
+                        <span style={{ fontSize: '12px', color: 'rgba(75,85,99,1)' }}>+{ws.tech_stack.length - 5}</span>
+                      )}
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Bottom Navigation (Mobile only) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-white/10 px-6 py-3 flex items-center justify-between z-50">
-        <Link href="/" className="flex flex-col items-center gap-1 text-gray-500 hover:text-fuchsia-400 transition-colors">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {/* Mobile nav */}
+      <nav className="md:hidden" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#000', borderTop: '1px solid rgba(255,255,255,0.1)', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 50 }}>
+        <Link href="/" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: 'rgba(107,114,128,1)', textDecoration: 'none' }}>
+          <svg style={{ width: '24px', height: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
-          <span className="text-[10px] font-medium">Home</span>
+          <span style={{ fontSize: '10px', fontWeight: '500' }}>Home</span>
         </Link>
-        <Link href="/workspace" className="flex flex-col items-center gap-1 text-fuchsia-400 transition-colors">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <Link href="/workspace" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: 'white', textDecoration: 'none' }}>
+          <svg style={{ width: '24px', height: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
           </svg>
-          <span className="text-[10px] font-medium">Workspaces</span>
+          <span style={{ fontSize: '10px', fontWeight: '500' }}>Workspaces</span>
         </Link>
-        <Link href="/agents" className="flex flex-col items-center gap-1 text-gray-500 hover:text-fuchsia-400 transition-colors">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <Link href="/agents" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: 'rgba(107,114,128,1)', textDecoration: 'none' }}>
+          <svg style={{ width: '24px', height: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4M4 19h4m9-15v4m-2-2h4m-5 15l-3-4 3-4 3 4-3 4z" />
           </svg>
-          <span className="text-[10px] font-medium">Agents</span>
+          <span style={{ fontSize: '10px', fontWeight: '500' }}>Agents</span>
         </Link>
-        <Link href="#" className="flex flex-col items-center gap-1 text-gray-500 hover:text-fuchsia-400 transition-colors">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <Link href="#" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: 'rgba(107,114,128,1)', textDecoration: 'none' }}>
+          <svg style={{ width: '24px', height: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <span className="text-[10px] font-medium">Settings</span>
+          <span style={{ fontSize: '10px', fontWeight: '500' }}>Settings</span>
         </Link>
       </nav>
     </div>
