@@ -18,10 +18,19 @@ export function DashboardSidebar() {
   const { accountId, disconnect } = useNearWallet()
 
   return (
-    <aside className="w-56 border-r border-white/10 flex flex-col py-6 px-4 shrink-0 h-screen sticky top-0">
+    <aside
+      className="w-56 flex flex-col py-6 px-4 shrink-0 h-screen sticky top-0"
+      style={{
+        background: 'rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRight: '1px solid rgba(255,255,255,0.1)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      }}
+    >
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5 mb-8 px-2 group">
-        <BrandIcon className="h-8 w-8 drop-shadow-[0_0_8px_rgba(217,70,239,0.4)] group-hover:drop-shadow-[0_0_14px_rgba(255,140,0,0.45)] transition-all" />
+      <Link href="/" className="flex items-center gap-2.5 mb-8 px-2">
+        <BrandIcon className="h-8 w-8" />
         <span className="font-semibold tracking-tight">EVOAGENT</span>
       </Link>
 
@@ -36,7 +45,7 @@ export function DashboardSidebar() {
               href={item.href}
               className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors ${
                 isActive
-                  ? 'bg-fuchsia-500/15 text-fuchsia-400'
+                  ? 'bg-white/10 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -50,7 +59,7 @@ export function DashboardSidebar() {
       {/* User section */}
       <div className="border-t border-white/10 pt-4 mt-4">
         <div className="flex items-center gap-3 px-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
+          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold shrink-0">
             N
           </div>
           <div className="min-w-0 flex-1">
@@ -63,7 +72,7 @@ export function DashboardSidebar() {
             </p>
             <button
               onClick={disconnect}
-              className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
             >
               Disconnect
             </button>

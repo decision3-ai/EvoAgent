@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone, UTC
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,7 +45,7 @@ async def track_event(
         if payload.message_id is None:
             raise HTTPException(status_code=422, detail='message_id required for code_copy event')
         # 1 code_copy per message_id + workspace_id per calendar day
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         dupe = await db.execute(
             select(func.count()).select_from(AnalyticsEvent).where(
                 AnalyticsEvent.event_type == 'code_copy',
@@ -73,7 +73,7 @@ async def track_event(
     # EvoPoints V3.5: +3 for code_copy
     if payload.event_type == 'code_copy':
         workspace.evo_points = (workspace.evo_points or 0) + 3
-        workspace.evo_points_updated_at = datetime.now(UTC)
+        workspace.evo_points_updated_at = datetime.utcnow()
 
     variant = await _get_session_variant(payload.session_id)
     event = AnalyticsEvent(

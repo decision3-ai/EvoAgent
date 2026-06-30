@@ -6,7 +6,6 @@ import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet'
 import { setupMeteorWallet } from '@near-wallet-selector/meteor-wallet'
 import { setupHereWallet } from '@near-wallet-selector/here-wallet'
 import { setupIntearWallet } from '@near-wallet-selector/intear-wallet'
-import { setupNearMobileWallet } from '@near-wallet-selector/near-mobile-wallet'
 
 // Start on testnet — one string swap to go to mainnet
 export const NEAR_NETWORK_ID = 'testnet' as const
@@ -26,7 +25,6 @@ export async function initWalletSelector() {
       setupMeteorWallet(),
       setupHereWallet(),
       setupIntearWallet(),
-      setupNearMobileWallet(),
     ] as WalletModuleFactory[],
   })
   return selector

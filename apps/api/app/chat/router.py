@@ -1,15 +1,13 @@
 """
 Chat router — the core of evoagent.io v1.
 
-Calls Anthropic API with full session history.
-SSE streaming replaces this in the next sprint.
+All LLM calls go through OpenRouter (fallback chain of models).
 """
 
 import json
 import time
 import uuid
 import logging
-import anthropic
 import httpx
 from typing import AsyncGenerator
 
@@ -34,11 +32,11 @@ router = APIRouter()
 
 _OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
-# Fallback chain: cheapest first, Anthropic as last resort
+# Fallback chain: cheapest first, Claude (via OpenRouter) as last resort
 _FALLBACK_CHAIN = [
-    {'provider': 'openrouter', 'model': 'deepseek/deepseek-chat'},
-    {'provider': 'openrouter', 'model': 'google/gemini-2.0-flash-001'},
-    {'provider': 'anthropic',  'model': 'claude-sonnet-4-6'},
+    'deepseek/deepseek-chat',
+    'google/gemini-2.0-flash-001',
+    'anthropic/claude-sonnet-4.6',
 ]
 
 
@@ -48,49 +46,37 @@ async def _call_with_fallback(
     max_tokens: int,
 ) -> tuple[str, int, str]:
     """Try each provider in order. Returns (text, tokens_used, model_used)."""
-    errors: list[str] = []
-    for entry in _FALLBACK_CHAIN:
-        provider = entry['provider']
-        model = entry['model']
-        try:
-            if provider == 'openrouter':
-                if not settings.OPENROUTER_API_KEY:
-                    continue
-                msgs = (
-                    [{'role': 'system', 'content': system_prompt}] if system_prompt else []
-                ) + messages
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(
-                        _OPENROUTER_URL,
-                        headers={
-                            'Authorization': f'Bearer {settings.OPENROUTER_API_KEY}',
-                            'Content-Type': 'application/json',
-                        },
-                        json={'model': model, 'messages': msgs, 'max_tokens': max_tokens},
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
-                    text = data['choices'][0]['message']['content']
-                    usage = data.get('usage', {})
-                    tokens_used = (
-                        usage.get('prompt_tokens', 0) + usage.get('completion_tokens', 0)
-                    )
-            else:  # anthropic
-                ac = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-                api_resp = await ac.messages.create(
-                    model=model,
-                    max_tokens=max_tokens,
-                    system=system_prompt,
-                    messages=messages,
-                )
-                text = api_resp.content[0].text
-                tokens_used = api_resp.usage.input_tokens + api_resp.usage.output_tokens
+    if not settings.OPENROUTER_API_KEY:
+        raise RuntimeError('OPENROUTER_API_KEY is not set — all LLM calls go through OpenRouter')
 
-            logger.info('llm_call provider=%s model=%s tokens=%d', provider, model, tokens_used)
+    errors: list[str] = []
+    for model in _FALLBACK_CHAIN:
+        try:
+            msgs = (
+                [{'role': 'system', 'content': system_prompt}] if system_prompt else []
+            ) + messages
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    _OPENROUTER_URL,
+                    headers={
+                        'Authorization': f'Bearer {settings.OPENROUTER_API_KEY}',
+                        'Content-Type': 'application/json',
+                    },
+                    json={'model': model, 'messages': msgs, 'max_tokens': max_tokens},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                text = data['choices'][0]['message']['content']
+                usage = data.get('usage', {})
+                tokens_used = (
+                    usage.get('prompt_tokens', 0) + usage.get('completion_tokens', 0)
+                )
+
+            logger.info('llm_call provider=openrouter model=%s tokens=%d', model, tokens_used)
             return text, tokens_used, model
 
         except Exception as exc:
-            logger.warning('llm_provider_failed provider=%s model=%s error=%s', provider, model, exc)
+            logger.warning('llm_provider_failed provider=openrouter model=%s error=%s', model, exc)
             errors.append(f'{model}: {exc}')
 
     raise RuntimeError(f'All LLM providers failed: {"; ".join(errors)}')
@@ -107,66 +93,45 @@ async def _stream_with_fallback(
       - ('done', model_used, tokens_used) at end
       - ('error', error_msg, None) if all providers fail
     """
+    if not settings.OPENROUTER_API_KEY:
+        yield ('error', 'OPENROUTER_API_KEY is not set — all LLM calls go through OpenRouter', None)
+        return
+
     errors: list[str] = []
 
-    for entry in _FALLBACK_CHAIN:
-        provider = entry['provider']
-        model = entry['model']
-
+    for model in _FALLBACK_CHAIN:
         try:
-            if provider == 'openrouter':
-                if not settings.OPENROUTER_API_KEY:
-                    continue
+            msgs = (
+                [{'role': 'system', 'content': system_prompt}] if system_prompt else []
+            ) + messages
+            headers = {
+                'Authorization': f'Bearer {settings.OPENROUTER_API_KEY}',
+                'Content-Type': 'application/json',
+            }
+            body = {'model': model, 'messages': msgs, 'max_tokens': max_tokens, 'stream': True}
 
-                msgs = (
-                    [{'role': 'system', 'content': system_prompt}] if system_prompt else []
-                ) + messages
-                headers = {
-                    'Authorization': f'Bearer {settings.OPENROUTER_API_KEY}',
-                    'Content-Type': 'application/json',
-                }
-                body = {'model': model, 'messages': msgs, 'max_tokens': max_tokens, 'stream': True}
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream('POST', _OPENROUTER_URL, headers=headers, json=body) as resp:
+                    resp.raise_for_status()
+                    tokens_estimate = 0
+                    async for line in resp.aiter_lines():
+                        if not line.startswith('data: '):
+                            continue
+                        payload = line[6:]
+                        if payload.strip() == '[DONE]':
+                            break
+                        chunk = json.loads(payload)
+                        content = chunk['choices'][0]['delta'].get('content') or ''
+                        if content:
+                            tokens_estimate += len(content) // 4  # rough estimate
+                            yield ('token', content, None)
 
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    async with client.stream('POST', _OPENROUTER_URL, headers=headers, json=body) as resp:
-                        resp.raise_for_status()
-                        tokens_estimate = 0
-                        async for line in resp.aiter_lines():
-                            if not line.startswith('data: '):
-                                continue
-                            payload = line[6:]
-                            if payload.strip() == '[DONE]':
-                                break
-                            chunk = json.loads(payload)
-                            content = chunk['choices'][0]['delta'].get('content') or ''
-                            if content:
-                                tokens_estimate += len(content) // 4  # rough estimate
-                                yield ('token', content, None)
-
-                logger.info('llm_stream provider=%s model=%s', provider, model)
-                yield ('done', model, tokens_estimate)
-                return
-
-            else:  # anthropic
-                client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-                async with client.messages.stream(
-                    model=model,
-                    max_tokens=max_tokens,
-                    system=system_prompt,
-                    messages=messages,
-                ) as stream:
-                    async for text in stream.text_stream:
-                        yield ('token', text, None)
-
-                    final_msg = await stream.get_final_message()
-                    tokens_used = final_msg.usage.input_tokens + final_msg.usage.output_tokens
-
-                logger.info('llm_stream provider=%s model=%s tokens=%d', provider, model, tokens_used)
-                yield ('done', model, tokens_used)
-                return
+            logger.info('llm_stream provider=openrouter model=%s', model)
+            yield ('done', model, tokens_estimate)
+            return
 
         except Exception as exc:
-            logger.warning('llm_stream_failed provider=%s model=%s error=%s', provider, model, exc)
+            logger.warning('llm_stream_failed provider=openrouter model=%s error=%s', model, exc)
             errors.append(f'{model}: {exc}')
 
     yield ('error', f'All providers failed: {"; ".join(errors)}', None)

@@ -25,6 +25,7 @@ task_routes = {
 
 task_queues_max_priority = 10
 task_default_priority = 5
+worker_concurrency = 2
 
 # Celery Beat schedule
 beat_schedule = {

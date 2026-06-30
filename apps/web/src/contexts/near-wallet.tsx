@@ -7,7 +7,7 @@ import React, {
   useState,
   useCallback,
 } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import type { WalletSelector } from '@near-wallet-selector/core'
 import { setupModal } from '@near-wallet-selector/modal-ui'
 import { initWalletSelector, AGENTEVO_CONTRACT_ID } from '@/lib/near'
@@ -52,7 +52,9 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
   const [wasSessionCleared, setWasSessionCleared] = useState(false)
   const [isEmailAuth, setIsEmailAuth] = useState(false)
   const [isNearAuth, setIsNearAuth] = useState(false)
+  const [walletInitialized, setWalletInitialized] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
 
   // ── NEAR auth helpers ──────────────────────────────────────────────────────
 
@@ -111,9 +113,14 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
     // If void: browser wallet (MyNearWallet) is redirecting — handled in callback effect below
   }
 
-  // ── Init wallet selector ───────────────────────────────────────────────────
+  // ── Init wallet selector (skip on landing page) ───────────────────────────
 
   useEffect(() => {
+    if (pathname === '/' || walletInitialized) {
+      setIsLoading(false)
+      return
+    }
+    setWalletInitialized(true)
     initWalletSelector()
       .then(async (s) => {
         setSelector(s)
@@ -157,7 +164,7 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
       })
       .catch(console.error)
       .finally(() => setIsLoading(false))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pathname, walletInitialized]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Browser wallet callback (MyNearWallet redirect) ────────────────────────
 
@@ -265,8 +272,10 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
       body: JSON.stringify({ email, password }),
     })
     if (!res.ok) {
-      const err = await res.json().catch(() => ({})) as { detail?: string }
-      throw new Error(err.detail ?? 'Registration failed')
+      const err = await res.json().catch(() => ({})) as { detail?: string | Array<{ msg: string }> }
+      const detail = err.detail
+      const msg = Array.isArray(detail) ? detail.map((d) => d.msg).join(', ') : (detail ?? 'Registration failed')
+      throw new Error(msg)
     }
     const data = await res.json() as { access_token: string }
     localStorage.setItem('email_auth_token', data.access_token)

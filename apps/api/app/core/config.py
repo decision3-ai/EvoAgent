@@ -12,9 +12,8 @@ class Settings(BaseSettings):
         'postgresql+asyncpg://agentevo:agentevo_secret@postgres:5432/agentevo_db'
     )
     REDIS_URL: str = 'redis://redis:6379/0'
+    OLLAMA_BASE_URL: str = 'http://ollama:11434'
 
-    OPENAI_API_KEY: str = ''
-    ANTHROPIC_API_KEY: str = ''
     OPENROUTER_API_KEY: str = ''
     GEMINI_API_KEY: str = ''
     SERPER_API_KEY: str = ''

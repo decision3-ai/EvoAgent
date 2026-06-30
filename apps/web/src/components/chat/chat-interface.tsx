@@ -50,7 +50,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
   const [sessions, setSessions] = useState<Session[]>(initialSessions)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -127,7 +127,6 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
       }
     } catch (err) {
       console.error('Stream error, falling back to sync:', err)
-      // Fallback: only add messages that were NOT already added via streaming
       try {
         const api = createApiClient(accountId)
         const res = await api.post(
@@ -137,7 +136,6 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
         const { user_message, assistant_message, session_title } = res.data
         setMessages((prev) => [
           ...prev,
-          // Skip user_message if already added via stream's 'start' event
           ...(userMsgAddedRef.current ? [] : [user_message]),
           assistant_message,
         ])
@@ -166,7 +164,6 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // Limit consecutive blank lines to 2 (keeps paste clean)
     const cleaned = e.target.value.replace(/\n{3,}/g, '\n\n')
     setInput(cleaned)
   }
@@ -191,7 +188,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
   const agentName = workspace.agent_profile?.name ?? 'Coding Partner'
 
   return (
-    <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="flex h-screen bg-black text-white overflow-hidden">
       {/* ── Sessions Sidebar ─────────────────────────────────────────────── */}
       <aside
         className={`${
@@ -206,7 +203,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               className="flex items-center gap-2 group"
             >
               <BrandIcon className="h-6 w-6" />
-              <span className="font-semibold text-sm truncate group-hover:text-fuchsia-400 transition-colors">
+              <span className="font-semibold text-sm truncate group-hover:text-white transition-colors">
                 {workspace.name}
               </span>
             </Link>
@@ -259,7 +256,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               Agent settings
             </Link>
             <div className="flex items-center gap-2.5 px-3 py-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-fuchsia-400 to-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold shrink-0">
                 N
               </div>
               <span className="text-sm text-gray-500 truncate">
@@ -292,11 +289,9 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               <img
                 src="/3.png"
                 alt=""
-                className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/10 drop-shadow-[0_0_8px_rgba(217,70,239,0.4)]"
+                className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/10"
               />
-              <div>
-                <span className="text-sm font-medium">{agentName}</span>
-              </div>
+              <span className="text-sm font-medium">{agentName}</span>
             </div>
           </div>
         </header>
@@ -309,7 +304,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
                 <img
                   src="/3.png"
                   alt=""
-                  className="mx-auto mb-4 h-16 w-16 rounded-full object-cover shadow-xl shadow-fuchsia-500/25 ring-1 ring-white/10"
+                  className="mx-auto mb-4 h-16 w-16 rounded-full object-cover ring-1 ring-white/10"
                 />
                 <h2 className="text-xl font-semibold mb-2">
                   {agentName} — ready to build
@@ -339,7 +334,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
                     <button
                       key={prompt}
                       onClick={() => setInput(prompt)}
-                      className="text-xs bg-white/5 border border-white/10 hover:border-fuchsia-500/30 hover:bg-fuchsia-500/5 px-3 py-2 rounded-lg text-gray-400 hover:text-white transition-all"
+                      className="text-xs bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 px-3 py-2 rounded-lg text-gray-400 hover:text-white transition-all"
                     >
                       {prompt}
                     </button>
@@ -372,7 +367,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
                 />
                 <div className="max-w-[78%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-gray-100">
                   <span className="whitespace-pre-wrap">{streamingContent}</span>
-                  <span className="inline-block w-0.5 h-4 bg-fuchsia-400 animate-pulse ml-0.5 align-middle" />
+                  <span className="inline-block w-0.5 h-4 bg-white animate-pulse ml-0.5 align-middle" />
                 </div>
               </div>
             )}
@@ -386,9 +381,9 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
                 />
                 <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
                   <div className="flex gap-1 items-center h-5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-bounce" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" />
                   </div>
                 </div>
               </div>
@@ -401,7 +396,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
         {/* Input area */}
         <div className="shrink-0 border-t border-white/10 px-4 py-4">
           <div className="max-w-3xl mx-auto">
-            <div className="flex gap-3 items-end bg-white/5 border border-white/10 rounded-2xl px-4 py-3 focus-within:border-fuchsia-500/40 focus-within:bg-white/[0.07] transition-all">
+            <div className="flex gap-3 items-end bg-white/5 border border-white/10 rounded-2xl px-4 py-3 focus-within:border-white/30 transition-all">
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -421,17 +416,17 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               <button
                 onClick={sendMessage}
                 disabled={loading || !input.trim()}
-                className="w-8 h-8 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0 shadow-lg shadow-fuchsia-500/30"
+                className="w-8 h-8 rounded-xl bg-white hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
                 aria-label="Send message"
               >
                 {loading ? (
                   <span className="flex gap-0.5 items-center">
-                    <span className="w-1 h-1 rounded-full bg-white animate-bounce [animation-delay:-0.2s]" />
-                    <span className="w-1 h-1 rounded-full bg-white animate-bounce [animation-delay:-0.1s]" />
-                    <span className="w-1 h-1 rounded-full bg-white animate-bounce" />
+                    <span className="w-1 h-1 rounded-full bg-black animate-bounce [animation-delay:-0.2s]" />
+                    <span className="w-1 h-1 rounded-full bg-black animate-bounce [animation-delay:-0.1s]" />
+                    <span className="w-1 h-1 rounded-full bg-black animate-bounce" />
                   </span>
                 ) : (
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                 )}

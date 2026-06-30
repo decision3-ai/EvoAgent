@@ -77,34 +77,41 @@ export default function WorkspacePage() {
             </button>
             <img src="/2.png" alt="EvoAgent" style={{ height: '80px', width: 'auto', objectFit: 'contain' }} />
           </div>
-          <Link
-            href="/workspace/new"
-            className="flex items-center gap-2 transition-all"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '12px',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: 'white',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)',
-              marginRight: '16px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
-            }}
-          >
-            <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Workspace
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: '16px' }}>
+            <button
+              onClick={() => { localStorage.clear(); router.push('/login') }}
+              style={{ fontSize: '13px', color: 'rgba(156,163,175,1)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
+            >
+              Sign out
+            </button>
+            <Link
+              href="/workspace/new"
+              className="flex items-center gap-2 transition-all"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: 'white',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+              }}
+            >
+              <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Workspace
+            </Link>
+          </div>
         </div>
 
         {workspaces.length === 0 ? (

@@ -1,6 +1,6 @@
 import uuid
 import random
-from datetime import datetime, timezone, timedelta, UTC
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -51,7 +51,7 @@ async def create_workspace(
         owner_id=owner_id,
         is_default=is_first,
         evo_points=20,
-        evo_points_updated_at=datetime.now(UTC),
+        evo_points_updated_at=datetime.utcnow(),
     )
     db.add(workspace)
     await db.flush()
@@ -362,7 +362,7 @@ async def submit_feedback(
     # EvoPoints V3.5: +10 for thumbs up
     if payload.score == 5:
         workspace.evo_points = (workspace.evo_points or 0) + 10
-        workspace.evo_points_updated_at = datetime.now(UTC)
+        workspace.evo_points_updated_at = datetime.utcnow()
 
     r = get_redis()
     variant = await r.get(f'session_variant:{session_id}')

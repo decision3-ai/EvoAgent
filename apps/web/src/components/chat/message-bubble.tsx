@@ -20,7 +20,7 @@ function CopyButton({ text, className = '', onCopy }: { text: string; className?
     <button
       onClick={copy}
       className={`flex items-center gap-1.5 text-xs transition-colors ${
-        copied ? 'text-green-400' : 'text-gray-500 hover:text-gray-200'
+        copied ? 'text-white' : 'text-gray-500 hover:text-gray-200'
       } ${className}`}
       aria-label={copied ? 'Copied' : 'Copy'}
     >
@@ -115,9 +115,9 @@ function renderRaw(
 }
 
 const SECTIONS = {
-  PLAN:        { label: 'Plan',        className: 'text-fuchsia-400     border-fuchsia-500/30     bg-fuchsia-500/10'     },
-  CODE:        { label: 'Code',        className: 'text-violet-400  border-violet-500/30  bg-violet-500/10'  },
-  EXPLANATION: { label: 'Explanation', className: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' },
+  PLAN:        { label: 'Plan',        className: 'text-gray-300 border-white/20 bg-white/5' },
+  CODE:        { label: 'Code',        className: 'text-gray-300 border-white/20 bg-white/5' },
+  EXPLANATION: { label: 'Explanation', className: 'text-gray-300 border-white/20 bg-white/5' },
 } as const
 
 type SectionKey = keyof typeof SECTIONS
@@ -235,7 +235,7 @@ export function MessageBubble({
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} group`}>
       {/* Avatar */}
       {isUser ? (
-        <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-sm font-bold mt-0.5 bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400">
+        <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-sm font-bold mt-0.5 bg-gray-800 border border-white/15 text-gray-300">
           Y
         </div>
       ) : (
@@ -260,7 +260,7 @@ export function MessageBubble({
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
             isUser
-              ? 'bg-fuchsia-500/15 border border-fuchsia-500/20 text-white rounded-tr-sm'
+              ? 'bg-white/10 border border-white/15 text-white rounded-tr-sm'
               : 'bg-white/5 border border-white/10 text-gray-100 rounded-tl-sm'
           }`}
         >
@@ -274,8 +274,8 @@ export function MessageBubble({
               disabled={completed || completionSubmitting}
               className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                 completed
-                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 cursor-not-allowed'
-                  : 'border-white/10 bg-white/5 text-gray-400 hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 cursor-pointer'
+                  ? 'border-white/20 bg-white/10 text-white cursor-not-allowed'
+                  : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/25 hover:bg-white/10 hover:text-white cursor-pointer'
               }`}
             >
               {completed ? '✅ Solved' : 'Did this solve it? ✅ Solved'}
@@ -307,9 +307,7 @@ export function MessageBubble({
                   onClick={() => handleFeedback(5)}
                   disabled={submitting || feedback !== null}
                   className={`text-sm px-1.5 py-0.5 rounded transition-colors cursor-pointer disabled:cursor-not-allowed ${
-                    feedback === 5
-                      ? 'text-green-400'
-                      : 'text-gray-600 hover:text-green-400'
+                    feedback === 5 ? 'text-white' : 'text-gray-600 hover:text-white'
                   }`}
                   aria-label="Thumbs up"
                 >
@@ -319,9 +317,7 @@ export function MessageBubble({
                   onClick={() => handleFeedback(1)}
                   disabled={submitting || feedback !== null}
                   className={`text-sm px-1.5 py-0.5 rounded transition-colors cursor-pointer disabled:cursor-not-allowed ${
-                    feedback === 1
-                      ? 'text-red-400'
-                      : 'text-gray-600 hover:text-red-400'
+                    feedback === 1 ? 'text-white' : 'text-gray-600 hover:text-white'
                   }`}
                   aria-label="Thumbs down"
                 >

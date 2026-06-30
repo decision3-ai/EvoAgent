@@ -56,3 +56,6 @@ redis_data/
 
 # Celery
 celerybeat-schedule
+
+# Akash (contains real secrets)
+infrastructure/akash/deploy.filled.yaml

@@ -2,16 +2,15 @@
 Mem0 memory client — wraps mem0ai for async use.
 
 Vector store : our existing PostgreSQL + pgvector (DATABASE_URL)
-LLM          : Anthropic claude-haiku (ANTHROPIC_API_KEY) — used for fact extraction
-Embedder     : OpenAI text-embedding-3-small (OPENAI_API_KEY) — used for vector search
-               NOTE: Anthropic does not provide an embeddings API, so OpenAI is required
-               for the vector component. Both keys must be set in the environment.
+LLM          : Claude haiku via OpenRouter (OPENROUTER_API_KEY) — used for fact extraction
+Embedder     : Ollama nomic-embed-text (OLLAMA_BASE_URL) — used for vector search,
+               accessed through Ollama's OpenAI-compatible /v1 endpoint (768 dims)
 """
 
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional
 from urllib.parse import urlparse
 
@@ -21,32 +20,35 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# OpenAI client for embeddings
-_openai_client: Optional[openai.AsyncOpenAI] = None
+# Embedding client — Ollama via its OpenAI-compatible /v1 endpoint
+_embed_client: Optional[openai.AsyncOpenAI] = None
 
 
-def _get_openai_client() -> openai.AsyncOpenAI:
-    """Lazy singleton for OpenAI async client."""
-    global _openai_client
-    if _openai_client is None:
-        _openai_client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-    return _openai_client
+def _get_embed_client() -> openai.AsyncOpenAI:
+    """Lazy singleton for Ollama embedding client (OpenAI-compatible API)."""
+    global _embed_client
+    if _embed_client is None:
+        _embed_client = openai.AsyncOpenAI(
+            base_url=f'{settings.OLLAMA_BASE_URL}/v1',
+            api_key='ollama',  # required by client, ignored by Ollama
+        )
+    return _embed_client
 
 
 async def _embed_text(text: str) -> Optional[List[float]]:
     """
-    Generate embedding vector for text using OpenAI text-embedding-3-small.
-    Returns 1536-dimensional vector or None on error.
+    Generate embedding vector for text using Ollama nomic-embed-text.
+    Returns 768-dimensional vector or None on error.
     """
     try:
-        client = _get_openai_client()
+        client = _get_embed_client()
         response = await client.embeddings.create(
-            model='text-embedding-3-small',
+            model='nomic-embed-text',
             input=text,
         )
         return response.data[0].embedding
     except Exception:
-        logger.exception('OpenAI embedding failed')
+        logger.exception('Ollama embedding failed')
         return None
 
 _memory_client = None
@@ -73,17 +75,19 @@ def _get_client():
         db = _parse_db_url(settings.DATABASE_URL)
         config = {
             'llm': {
-                'provider': 'anthropic',
+                'provider': 'openai',  # OpenRouter is OpenAI-compatible
                 'config': {
-                    'model': 'claude-haiku-4-5-20251001',
-                    'api_key': settings.ANTHROPIC_API_KEY,
+                    'model': 'anthropic/claude-haiku-4.5',
+                    'api_key': settings.OPENROUTER_API_KEY,
+                    'openai_base_url': 'https://openrouter.ai/api/v1',
                 },
             },
             'embedder': {
-                'provider': 'openai',
+                'provider': 'openai',  # Ollama is OpenAI-compatible
                 'config': {
-                    'api_key': settings.OPENAI_API_KEY,
-                    'model': 'text-embedding-3-small',
+                    'api_key': 'ollama',
+                    'model': 'nomic-embed-text',
+                    'openai_base_url': f'{settings.OLLAMA_BASE_URL}/v1',
                 },
             },
             'vector_store': {
@@ -91,7 +95,7 @@ def _get_client():
                 'config': {
                     **db,
                     'collection_name': 'agent_memories',
-                    'embedding_model_dims': 1536,
+                    'embedding_model_dims': 768,
                 },
             },
         }
@@ -119,7 +123,7 @@ async def get_relevant_memories(agent_id: str, query: str) -> List[str]:
     """
     Fetch top-5 memories for this agent using multilingual vector search.
 
-    Uses OpenAI text-embedding-3-small to embed the query, then performs
+    Uses Ollama nomic-embed-text to embed the query, then performs
     pgvector cosine similarity search against stored memory embeddings.
     Falls back to importance_score ranking if embeddings unavailable.
     Updates last_used_at for retrieved rows.
@@ -131,7 +135,7 @@ async def get_relevant_memories(agent_id: str, query: str) -> List[str]:
         from app.core.database import AsyncSessionLocal
 
         agent_uuid = uuid.UUID(agent_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
 
         # Generate embedding for the query
         query_embedding = await _embed_text(query)
@@ -200,6 +204,6 @@ async def embed_memory_content(content: str) -> Optional[List[float]]:
     Generate embedding for memory content before storing.
 
     Call this when inserting into agent_memories to populate the embedding column.
-    Returns 1536-dimensional vector or None on error.
+    Returns 768-dimensional vector or None on error.
     """
     return await _embed_text(content)
