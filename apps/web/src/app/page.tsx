@@ -16,7 +16,7 @@ export default function Home() {
           Your development partner for continuous evolution.
         </p>
         <Link
-          href="/workspace"
+          href="/login"
           className="mt-2 border border-white/30 bg-transparent text-white px-8 py-3 rounded-lg font-semibold text-sm hover:bg-white hover:text-black transition-all"
         >
           Start Evolving →

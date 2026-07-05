@@ -75,7 +75,7 @@ export default function WorkspacePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <img src="/2.png" alt="EvoAgent" style={{ height: '80px', width: 'auto', objectFit: 'contain' }} />
+            <img src="/2.png" alt="EvoAgent" style={{ height: '72px', width: 'auto', objectFit: 'contain' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: '16px' }}>
             <button
@@ -206,8 +206,8 @@ export default function WorkspacePage() {
                     borderRadius: '16px',
                     padding: '20px',
                     background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
                     textDecoration: 'none',
                     color: 'white',
                   }}
@@ -245,7 +245,7 @@ export default function WorkspacePage() {
 
                   {ws.evo_points > 0 && (
                     <div style={{ marginBottom: '12px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: 'rgba(209,213,219,1)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '99px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#00B4A0', background: 'rgba(0,180,160,0.08)', border: '1px solid rgba(0,180,160,0.2)', padding: '2px 8px', borderRadius: '99px' }}>
                         ⚡ {ws.evo_points} EP
                       </span>
                     </div>

@@ -157,6 +157,21 @@ export async function trackEvent(
   })
 }
 
+export async function scheduleIdeaReminder(
+  token: string,
+  workspaceId: string,
+  text: string,
+  sessionId: string,
+  delaySeconds: number,
+): Promise<void> {
+  const api = createApiClient(token)
+  await api.post(`/api/v1/workspaces/${workspaceId}/ideas/remind`, {
+    text,
+    session_id: sessionId,
+    delay_seconds: delaySeconds,
+  })
+}
+
 export async function submitFeedback(
   token: string,
   workspaceId: string,

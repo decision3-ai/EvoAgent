@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNearWallet } from '@/contexts/near-wallet'
 import Link from 'next/link'
-import { createApiClient, streamChat, type Workspace, type Session, type Message } from '@/lib/api-client'
+import { createApiClient, streamChat, scheduleIdeaReminder, type Workspace, type Session, type Message } from '@/lib/api-client'
 import { BrandIcon } from '@/components/brand-icon'
 import { MessageBubble } from './message-bubble'
 
@@ -13,6 +13,46 @@ type Props = {
   sessions: Session[]
   initialMessages: Message[]
   sessionId: string
+}
+
+// ─── Quick Thought / Ideas ────────────────────────────────────────────────────
+
+type Idea = {
+  id: string
+  text: string
+  remindAt: string  // ISO datetime when the Celery reminder fires
+  remindLabel: string  // display label: '15m' | '1h' | '12h' | '24h'
+}
+
+const REMIND_OPTIONS: { label: string; seconds: number }[] = [
+  { label: '15m', seconds: 900 },
+  { label: '1h', seconds: 3600 },
+  { label: '12h', seconds: 43200 },
+  { label: '24h', seconds: 86400 },
+]
+
+function loadIdeas(workspaceId: string): Idea[] {
+  try {
+    const raw = localStorage.getItem(`ideas:${workspaceId}`)
+    const all: Idea[] = JSON.parse(raw ?? '[]')
+    // Drop ideas whose reminder already fired
+    const now = Date.now()
+    return all.filter((i) => new Date(i.remindAt).getTime() > now)
+  } catch {
+    return []
+  }
+}
+
+function saveIdeas(workspaceId: string, ideas: Idea[]): void {
+  localStorage.setItem(`ideas:${workspaceId}`, JSON.stringify(ideas))
+}
+
+function remindTimeLabel(remindAt: string): string {
+  const diff = new Date(remindAt).getTime() - Date.now()
+  if (diff <= 0) return 'soon'
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `in ${mins}m`
+  return `in ${Math.floor(mins / 60)}h`
 }
 
 function groupSessionsByDate(sessions: Session[]) {
@@ -52,6 +92,16 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
   const [loading, setLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
+
+  // Quick Thought
+  const [quickThoughtOpen, setQuickThoughtOpen] = useState(false)
+  const [quickThoughtText, setQuickThoughtText] = useState('')
+  const [ideas, setIdeas] = useState<Idea[]>([])
+
+  // Load ideas from localStorage once workspace is known
+  useEffect(() => {
+    setIdeas(loadIdeas(workspace.id))
+  }, [workspace.id])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -184,6 +234,43 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
     }
   }
 
+  const handleQuickThoughtNewProject = async () => {
+    const name = quickThoughtText.trim()
+    if (!name || !accountId) return
+    try {
+      const api = createApiClient(accountId)
+      await api.post('/api/v1/workspaces/', { name })
+      setQuickThoughtText('')
+      setQuickThoughtOpen(false)
+      router.push('/workspace')
+    } catch (err) {
+      console.error('Failed to create workspace:', err)
+    }
+  }
+
+  const handleQuickThoughtRemind = async (opt: { label: string; seconds: number }) => {
+    const text = quickThoughtText.trim()
+    if (!text || !accountId) return
+    const remindAt = new Date(Date.now() + opt.seconds * 1000).toISOString()
+    const idea: Idea = { id: crypto.randomUUID(), text, remindAt, remindLabel: opt.label }
+    const updated = [idea, ...ideas]
+    setIdeas(updated)
+    saveIdeas(workspace.id, updated)
+    try {
+      await scheduleIdeaReminder(accountId, workspace.id, text, sessionId, opt.seconds)
+    } catch (err) {
+      console.error('Failed to schedule reminder:', err)
+    }
+    setQuickThoughtText('')
+    setQuickThoughtOpen(false)
+  }
+
+  const dismissIdea = (id: string) => {
+    const updated = ideas.filter((i) => i.id !== id)
+    setIdeas(updated)
+    saveIdeas(workspace.id, updated)
+  }
+
   const sessionGroups = groupSessionsByDate(sessions)
   const agentName = workspace.agent_profile?.name ?? 'Coding Partner'
 
@@ -218,8 +305,47 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
             New session
           </button>
 
-          {/* Session groups */}
+          {/* Session groups + Ideas (scrollable) */}
           <div className="flex-1 overflow-y-auto space-y-4 mt-2">
+            {/* Ideas section */}
+            {ideas.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-600 font-medium px-3 mb-1 uppercase tracking-wider">
+                  Ideas
+                </p>
+                {ideas.map((idea) => (
+                  <div
+                    key={idea.id}
+                    className="mx-1 mb-1 px-3 py-2 rounded-lg flex items-start gap-2"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <span className="text-xs text-white/70 flex-1 leading-relaxed line-clamp-2 break-words">
+                      {idea.text}
+                    </span>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                        style={{ color: '#00B4A0', background: 'rgba(0,180,160,0.1)', border: '1px solid rgba(0,180,160,0.2)' }}
+                      >
+                        {remindTimeLabel(idea.remindAt)}
+                      </span>
+                      <button
+                        onClick={() => dismissIdea(idea.id)}
+                        className="text-gray-600 hover:text-gray-400 transition-colors text-xs leading-none"
+                        aria-label="Dismiss idea"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Session groups */}
             {sessionGroups.map((group) => (
               <div key={group.label}>
                 <p className="text-xs text-gray-600 font-medium px-3 mb-1 uppercase tracking-wider">
@@ -246,8 +372,73 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
             )}
           </div>
 
+          {/* Quick Thought inline panel */}
+          {quickThoughtOpen && (
+            <div
+              className="mx-1 mb-2 p-3 rounded-xl flex flex-col gap-2"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+              }}
+            >
+              <textarea
+                value={quickThoughtText}
+                onChange={(e) => setQuickThoughtText(e.target.value)}
+                placeholder="What's on your mind?"
+                className="w-full bg-transparent resize-none outline-none text-white placeholder-gray-600 text-xs leading-relaxed"
+                rows={2}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+              />
+              <button
+                onClick={handleQuickThoughtNewProject}
+                disabled={!quickThoughtText.trim()}
+                className="w-full text-left text-xs px-2 py-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                + New project
+              </button>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-gray-600 px-2">Remind me in</span>
+                <div className="flex gap-1">
+                  {REMIND_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.label}
+                      onClick={() => handleQuickThoughtRemind(opt)}
+                      disabled={!quickThoughtText.trim()}
+                      className="flex-1 text-[10px] py-1 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{
+                        color: '#00B4A0',
+                        background: 'rgba(0,180,160,0.08)',
+                        border: '1px solid rgba(0,180,160,0.15)',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Thought button */}
+          <button
+            onClick={() => setQuickThoughtOpen((v) => !v)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors w-full text-left mb-1"
+            style={{
+              color: quickThoughtOpen ? '#00B4A0' : 'rgba(107,114,128,1)',
+              background: quickThoughtOpen ? 'rgba(0,180,160,0.08)' : 'transparent',
+              border: quickThoughtOpen ? '1px solid rgba(0,180,160,0.15)' : '1px solid transparent',
+            }}
+          >
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            Quick thought
+          </button>
+
           {/* Bottom: account + settings */}
-          <div className="border-t border-white/10 pt-3 mt-3 space-y-1">
+          <div className="border-t border-white/10 pt-3 mt-1 space-y-1">
             <Link
               href={`/workspace/${workspace.id}/settings`}
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
