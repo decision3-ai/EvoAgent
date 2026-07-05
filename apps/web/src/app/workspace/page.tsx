@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useNearWallet } from '@/contexts/near-wallet'
-import { fetchWorkspaces, type Workspace } from '@/lib/api-client'
+import { fetchWorkspaces, fetchSessions, createApiClient, type Workspace } from '@/lib/api-client'
 
 const NOISE_BG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E")`
 
@@ -28,6 +28,23 @@ export default function WorkspacePage() {
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [ready, setReady] = useState(false)
+
+  const openWorkspace = async (workspaceId: string) => {
+    if (!accountId) return
+    try {
+      const sessions = await fetchSessions(accountId, workspaceId)
+      if (sessions.length > 0) {
+        const latest = sessions.find((s) => s.status === 'active') ?? sessions[0]
+        router.push(`/workspace/${workspaceId}/chat/${latest.id}`)
+        return
+      }
+      const api = createApiClient(accountId)
+      const res = await api.post(`/api/v1/workspaces/${workspaceId}/sessions/`, { title: 'New session' })
+      router.push(`/workspace/${workspaceId}/chat/${res.data.id}`)
+    } catch {
+      router.push(`/workspace/${workspaceId}`)
+    }
+  }
 
   useEffect(() => {
     if (isLoading) return
@@ -197,10 +214,10 @@ export default function WorkspacePage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
               {workspaces.map((ws) => (
-                <Link
+                <div
                   key={ws.id}
-                  href={`/workspace/${ws.id}`}
-                  className="group transition-all"
+                  onClick={() => openWorkspace(ws.id)}
+                  className="group transition-all cursor-pointer"
                   style={{
                     display: 'block',
                     borderRadius: '16px',
@@ -208,7 +225,6 @@ export default function WorkspacePage() {
                     background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
                     border: '1px solid rgba(255,255,255,0.12)',
                     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-                    textDecoration: 'none',
                     color: 'white',
                   }}
                   onMouseEnter={(e) => {
@@ -263,7 +279,7 @@ export default function WorkspacePage() {
                       )}
                     </div>
                   )}
-                </Link>
+                </div>
               ))}
             </div>
           </>
