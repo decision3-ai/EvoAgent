@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNearWallet } from '@/contexts/near-wallet'
+import { createApiClient } from '@/lib/api-client'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -22,6 +23,16 @@ export default function RegisterPage() {
 
     try {
       await registerWithEmail(email.trim(), password)
+      // Token is now in localStorage — use it directly before React state settles
+      const token = localStorage.getItem('email_auth_token')
+      if (token) {
+        const api = createApiClient(token)
+        const wsRes = await api.post('/api/v1/workspaces/', { name: 'My First Project' })
+        const workspaceId = wsRes.data.id
+        const sessRes = await api.post(`/api/v1/workspaces/${workspaceId}/sessions/`, { title: 'New session' })
+        router.push(`/workspace/${workspaceId}/chat/${sessRes.data.id}`)
+        return
+      }
       router.push('/workspace')
     } catch (err) {
       console.error('Registration error:', err)
