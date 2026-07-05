@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNearWallet } from '@/contexts/near-wallet'
+import { createApiClient, fetchWorkspaces } from '@/lib/api-client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,6 +23,15 @@ export default function LoginPage() {
 
     try {
       await loginWithEmail(email.trim(), password)
+      // Token is now in localStorage — use it directly before React state settles
+      const token = localStorage.getItem('email_auth_token')
+      if (token) {
+        const workspaces = await fetchWorkspaces(token)
+        if (workspaces.length === 0) {
+          const api = createApiClient(token)
+          await api.post('/api/v1/workspaces/', { name: 'My First Project' })
+        }
+      }
       router.push('/workspace')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
