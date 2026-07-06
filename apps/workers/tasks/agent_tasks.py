@@ -1064,6 +1064,48 @@ def write_session_memories(self, workspace_id: str, session_id: str, messages: l
         raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1))
 
 
+@app.task(name='tasks.agent_tasks.send_idea_reminder', bind=True, max_retries=2)
+def send_idea_reminder(self, session_id: str, text: str) -> dict:
+    """
+    Injects a reminder message into a chat session after the countdown expires.
+
+    Dispatched by POST /api/v1/workspaces/{id}/ideas/remind with a `countdown`
+    so the Celery ETA fires after the user-selected delay (15m / 1h / 12h / 24h).
+
+    Writes a single assistant-role message so it appears naturally in chat history
+    when the user next opens that session.
+    """
+    try:
+        engine = _make_engine()
+        sess_uuid = uuid.UUID(session_id)
+        content = f'💡 Reminder: {text} — still relevant?'
+
+        with Session(engine) as db:
+            # Verify session exists before inserting
+            exists = db.execute(
+                select(_Session.id).where(_Session.id == sess_uuid)
+            ).scalar_one_or_none()
+            if exists is None:
+                logger.warning('[IdeaReminder] Session %s not found — skipping', session_id)
+                return {'status': 'session_not_found', 'session_id': session_id}
+
+            db.add(_Message(
+                id=uuid.uuid4(),
+                session_id=sess_uuid,
+                role='assistant',
+                content=content,
+                created_at=datetime.utcnow(),
+            ))
+            db.commit()
+
+        logger.info('[IdeaReminder] Injected reminder into session %s', session_id)
+        return {'status': 'ok', 'session_id': session_id}
+
+    except Exception as exc:
+        logger.error('[IdeaReminder] Failed for session %s: %s', session_id, exc, exc_info=True)
+        raise self.retry(exc=exc, countdown=30 * (self.request.retries + 1))
+
+
 @app.task(name='tasks.agent_tasks.prune_old_interactions')
 def prune_old_interactions(agent_id: str, keep_last: int = 500) -> dict:
     """

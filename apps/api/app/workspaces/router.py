@@ -2,6 +2,7 @@ import uuid
 import random
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
@@ -171,6 +172,31 @@ async def trigger_evolution(
     celery_client.send_task('tasks.agent_tasks.run_evolution', args=[str(workspace_id)])
 
     return {'status': 'evolution_queued', 'workspace_id': str(workspace_id)}
+
+
+# ─── Quick Thought / Ideas ────────────────────────────────────────────────────
+
+class _IdeaReminderPayload(BaseModel):
+    text: str
+    session_id: uuid.UUID
+    delay_seconds: int
+
+
+@router.post('/{workspace_id}/ideas/remind', status_code=202)
+async def schedule_idea_reminder(
+    workspace_id: uuid.UUID,
+    payload: _IdeaReminderPayload,
+    owner_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Dispatch a Celery task that injects a reminder into the given session after delay."""
+    await _get_owned_workspace(workspace_id, owner_id, db)
+    celery_client.send_task(
+        'tasks.agent_tasks.send_idea_reminder',
+        args=[str(payload.session_id), payload.text],
+        countdown=payload.delay_seconds,
+    )
+    return {'status': 'scheduled', 'delay_seconds': payload.delay_seconds}
 
 
 # ─── Agent Profile ────────────────────────────────────────────────────────────
