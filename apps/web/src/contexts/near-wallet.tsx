@@ -11,6 +11,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import type { WalletSelector } from '@near-wallet-selector/core'
 import { setupModal } from '@near-wallet-selector/modal-ui'
 import { initWalletSelector, AGENTEVO_CONTRACT_ID } from '@/lib/near'
+import { createApiClient, fetchWorkspaces } from '@/lib/api-client'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
@@ -85,6 +86,21 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
     setAccountId(data.access_token)
     setIsNearAuth(true)
     document.cookie = `near_account_id=${data.account_id}; path=/; SameSite=Lax`
+    // Auto-create workspace + go directly to chat for new users
+    try {
+      const token = data.access_token
+      const workspaces = await fetchWorkspaces(token)
+      if (workspaces.length === 0) {
+        const api = createApiClient(token)
+        const wsRes = await api.post('/api/v1/workspaces/', { name: 'My First Project' })
+        const workspaceId = wsRes.data.id
+        const sessRes = await api.post(`/api/v1/workspaces/${workspaceId}/sessions/`, { title: 'New session' })
+        router.push(`/workspace/${workspaceId}/chat/${sessRes.data.id}`)
+        return
+      }
+    } catch {
+      // fall through to workspace list
+    }
     router.push('/workspace')
   }
 
