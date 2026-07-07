@@ -152,11 +152,11 @@ async def get_relevant_memories(agent_id: str, query: str) -> List[str]:
                     text(
                         '''
                         SELECT id, content,
-                               1 - (embedding <=> :embedding::vector) AS similarity
+                               1 - (embedding <=> CAST(:embedding AS vector)) AS similarity
                         FROM agent_memories
                         WHERE workspace_id = :agent_id
                           AND embedding IS NOT NULL
-                        ORDER BY embedding <=> :embedding::vector
+                        ORDER BY embedding <=> CAST(:embedding AS vector)
                         LIMIT 5
                         '''
                     ),
