@@ -4,6 +4,7 @@ Chat router — the core of evoagent.io v1.
 All LLM calls go through OpenRouter (fallback chain of models).
 """
 
+import asyncio
 import json
 import time
 import uuid
@@ -26,6 +27,7 @@ from app.workspaces.schemas import ChatRequest, ChatResponse, MessageResponse
 from app.workspaces.helpers import _get_owned_workspace, _get_session
 from app.memory.mem0_client import get_relevant_memories
 from app.evolution.constitutional import apply_constitutional_rules
+from app.chat.d3rcp_client import trigger_x402_payment
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -137,6 +139,20 @@ async def _stream_with_fallback(
     yield ('error', f'All providers failed: {"; ".join(errors)}', None)
 
 
+def classify_prompt(text: str) -> str:
+    """Return 'COMPLEX' or 'SIMPLE' without any LLM calls."""
+    if len(text) > 400:
+        return 'COMPLEX'
+    keywords = {
+        'analiziraj', 'analyze', 'refactor', 'architect', 'debug',
+        'implement', 'napravi plan', 'step by step', 'kod', 'code review',
+    }
+    lower = text.lower()
+    if any(kw in lower for kw in keywords):
+        return 'COMPLEX'
+    return 'SIMPLE'
+
+
 async def _resolve_system_prompt(session_id: uuid.UUID, agent) -> str:
     """Return challenger_prompt if this session was assigned the challenger variant, else champion."""
     r = get_redis()
@@ -174,6 +190,12 @@ async def chat(
     )
     db.add(user_msg)
     await db.flush()
+
+    # x402 payment trigger — fire-and-forget, never blocks chat
+    classification = classify_prompt(payload.message)
+    logger.info('x402_trigger session=%s user=%s classification=%s', session_id, owner_id, classification)
+    if classification == 'COMPLEX':
+        asyncio.create_task(trigger_x402_payment(str(session_id), owner_id, len(payload.message)))
 
     # Load full session history (includes the user message just flushed)
     result = await db.execute(
@@ -264,6 +286,12 @@ async def chat_stream(
 
     await db.commit()
     await db.refresh(user_msg)
+
+    # x402 payment trigger — fire-and-forget, never blocks streaming
+    classification = classify_prompt(payload.message)
+    logger.info('x402_trigger session=%s user=%s classification=%s', session_id, owner_id, classification)
+    if classification == 'COMPLEX':
+        asyncio.create_task(trigger_x402_payment(str(session_id), owner_id, len(payload.message)))
 
     # Load history after commit (includes the user message just saved)
     history_result = await db.execute(
