@@ -198,6 +198,8 @@ export function MessageBubble({
   const { accountId } = useNearWallet()
   const [feedback, setFeedback] = useState<1 | 5 | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [feedbackError, setFeedbackError] = useState<string | null>(null)
+  const [feedbackSaved, setFeedbackSaved] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [completionSubmitting, setCompletionSubmitting] = useState(false)
 
@@ -212,9 +214,14 @@ export function MessageBubble({
   const handleFeedback = async (score: 1 | 5) => {
     if (!accountId || submitting || feedback !== null) return
     setSubmitting(true)
+    setFeedbackError(null)
     try {
       await submitFeedback(accountId, workspaceId, sessionId, message.id, score)
       setFeedback(score)
+      setFeedbackSaved(true)
+      setTimeout(() => setFeedbackSaved(false), 3000)
+    } catch {
+      setFeedbackError('Ocjena nije spremljena — pokušaj ponovno')
     } finally {
       setSubmitting(false)
     }
@@ -306,8 +313,12 @@ export function MessageBubble({
                 <button
                   onClick={() => handleFeedback(5)}
                   disabled={submitting || feedback !== null}
-                  className={`text-sm px-1.5 py-0.5 rounded transition-colors cursor-pointer disabled:cursor-not-allowed ${
-                    feedback === 5 ? 'text-white' : 'text-gray-600 hover:text-white'
+                  className={`text-sm px-1.5 py-0.5 rounded transition-all cursor-pointer disabled:cursor-not-allowed ${
+                    feedback === 5
+                      ? 'text-green-500 scale-110'
+                      : feedback === 1
+                      ? 'text-gray-600 opacity-30'
+                      : 'text-gray-600 hover:text-white'
                   }`}
                   aria-label="Thumbs up"
                 >
@@ -316,13 +327,23 @@ export function MessageBubble({
                 <button
                   onClick={() => handleFeedback(1)}
                   disabled={submitting || feedback !== null}
-                  className={`text-sm px-1.5 py-0.5 rounded transition-colors cursor-pointer disabled:cursor-not-allowed ${
-                    feedback === 1 ? 'text-white' : 'text-gray-600 hover:text-white'
+                  className={`text-sm px-1.5 py-0.5 rounded transition-all cursor-pointer disabled:cursor-not-allowed ${
+                    feedback === 1
+                      ? 'text-red-500 scale-110'
+                      : feedback === 5
+                      ? 'text-gray-600 opacity-30'
+                      : 'text-gray-600 hover:text-white'
                   }`}
                   aria-label="Thumbs down"
                 >
                   👎
                 </button>
+                {feedbackSaved && (
+                  <span className="text-xs text-green-500">✓ Zabilježeno</span>
+                )}
+                {feedbackError && (
+                  <span className="text-xs text-red-500">{feedbackError}</span>
+                )}
               </div>
             )
           })()}
