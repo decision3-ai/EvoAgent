@@ -23,7 +23,7 @@ class AnalyticsEvent(Base):
         UUID(as_uuid=True), ForeignKey('messages.id'), nullable=True, index=True
     )
     event_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    event_metadata: Mapped[dict] = mapped_column('metadata', JSON, default=dict)
+    event_metadata: Mapped[dict] = mapped_column('event_metadata', JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
