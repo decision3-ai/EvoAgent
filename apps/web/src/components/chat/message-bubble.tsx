@@ -199,7 +199,6 @@ export function MessageBubble({
   const [feedback, setFeedback] = useState<1 | 5 | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [feedbackError, setFeedbackError] = useState<string | null>(null)
-  const [feedbackSaved, setFeedbackSaved] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [completionSubmitting, setCompletionSubmitting] = useState(false)
 
@@ -218,10 +217,8 @@ export function MessageBubble({
     try {
       await submitFeedback(accountId, workspaceId, sessionId, message.id, score)
       setFeedback(score)
-      setFeedbackSaved(true)
-      setTimeout(() => setFeedbackSaved(false), 3000)
     } catch {
-      setFeedbackError('Ocjena nije spremljena — pokušaj ponovno')
+      setFeedbackError("Couldn't save your rating — try again")
     } finally {
       setSubmitting(false)
     }
@@ -338,9 +335,6 @@ export function MessageBubble({
                 >
                   👎
                 </button>
-                {feedbackSaved && (
-                  <span className="text-xs text-green-500">✓ Zabilježeno</span>
-                )}
                 {feedbackError && (
                   <span className="text-xs text-red-500">{feedbackError}</span>
                 )}
