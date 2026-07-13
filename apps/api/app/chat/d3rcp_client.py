@@ -19,8 +19,8 @@ async def trigger_x402_payment(
 
     url = settings.D3RCP_BRIDGE_URL.rstrip('/') + '/d3rcp/pay'
     body = {
-        'session_id': session_id,
-        'user_id': user_id,
+        'sessionId': session_id,
+        'userId': user_id,
         'metadata': {
             'source': 'evoagent-chat',
             'prompt_length': prompt_length,
