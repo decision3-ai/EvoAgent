@@ -11,6 +11,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.auth.models import User
 from app.auth.schemas import RegisterRequest, LoginRequest, TokenResponse
+from app.chat.d3rcp_client import trigger_x402_payment
+import asyncio
 
 router = APIRouter(prefix='/auth', tags=['auth'])
 
@@ -42,6 +44,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     db.add(user)
     await db.commit()
 
+    asyncio.create_task(trigger_x402_payment(f"register-{user.id}", payload.email, 0))
     return TokenResponse(access_token=_create_jwt(payload.email), email=payload.email)
 
 
@@ -56,4 +59,5 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> To
             detail='Invalid email or password',
         )
 
+    asyncio.create_task(trigger_x402_payment(f"login-{user.id}", payload.email, 0))
     return TokenResponse(access_token=_create_jwt(payload.email), email=payload.email)

@@ -194,8 +194,9 @@ async def chat(
     # x402 payment trigger — fire-and-forget, never blocks chat
     classification = classify_prompt(payload.message)
     logger.info('x402_trigger session=%s user=%s classification=%s', session_id, owner_id, classification)
-    if classification == 'COMPLEX':
-        asyncio.create_task(trigger_x402_payment(str(session_id), owner_id, len(payload.message)))
+    # x402 trigger moved to registration/login — see auth/router.py
+    # if classification == 'COMPLEX':
+    #     asyncio.create_task(trigger_x402_payment(str(session_id), owner_id, len(payload.message)))
 
     # Load full session history (includes the user message just flushed)
     result = await db.execute(
@@ -290,8 +291,9 @@ async def chat_stream(
     # x402 payment trigger — fire-and-forget, never blocks streaming
     classification = classify_prompt(payload.message)
     logger.info('x402_trigger session=%s user=%s classification=%s', session_id, owner_id, classification)
-    if classification == 'COMPLEX':
-        asyncio.create_task(trigger_x402_payment(str(session_id), owner_id, len(payload.message)))
+    # x402 trigger moved to registration/login — see auth/router.py
+    # if classification == 'COMPLEX':
+    #     asyncio.create_task(trigger_x402_payment(str(session_id), owner_id, len(payload.message)))
 
     # Load history after commit (includes the user message just saved)
     history_result = await db.execute(
