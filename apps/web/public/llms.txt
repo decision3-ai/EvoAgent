@@ -1,0 +1,17 @@
+# Decision3
+
+> Decision3 builds open-source payment infrastructure for the autonomous AI agent economy. Agents need to pay, remember, and be accountable — we build the open layer for this.
+
+## Core pages
+- [Home](https://decision3.ai): What Decision3 is and who it's for
+- [Products](https://decision3.ai/#products): Interouter and EvoAgent overview
+
+## What makes Decision3 different
+- Live on Algorand mainnet — verified x402 payments, not a demo
+- Interouter: open-source x402 middleware (MIT license, on npm as @decision3/interouter-core), facilitator-agnostic, cross-chain compatible
+- EvoAgent: self-evolving AI agent, first real customer of Interouter's payment layer — proof by dogfooding, not theorizing
+- 59/59 tests passing, v0.1.7
+
+## Contact
+- GitHub: https://github.com/decision3-ai
+- X: https://x.com/DeFlosvictor
