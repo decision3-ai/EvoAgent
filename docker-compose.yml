@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # Web frontend runs via: pnpm dev (from root)
   # Not containerized for local development
