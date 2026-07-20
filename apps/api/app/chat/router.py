@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+_DEEPSEEK_DIRECT_URL = 'https://api.deepseek.com/v1/chat/completions'
 
 # Fallback chain: cheapest first, Claude (via OpenRouter) as last resort
 _FALLBACK_CHAIN = [
@@ -80,6 +81,34 @@ async def _call_with_fallback(
         except Exception as exc:
             logger.warning('llm_provider_failed provider=openrouter model=%s error=%s', model, exc)
             errors.append(f'{model}: {exc}')
+
+    # Last-resort: DeepSeek direct API (bypasses OpenRouter entirely)
+    if settings.DEEPSEEK_DIRECT_API_KEY:
+        try:
+            msgs = (
+                [{'role': 'system', 'content': system_prompt}] if system_prompt else []
+            ) + messages
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    _DEEPSEEK_DIRECT_URL,
+                    headers={
+                        'Authorization': f'Bearer {settings.DEEPSEEK_DIRECT_API_KEY}',
+                        'Content-Type': 'application/json',
+                    },
+                    json={'model': 'deepseek-chat', 'messages': msgs, 'max_tokens': max_tokens},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                text = data['choices'][0]['message']['content']
+                usage = data.get('usage', {})
+                tokens_used = (
+                    usage.get('prompt_tokens', 0) + usage.get('completion_tokens', 0)
+                )
+            logger.info('llm_call provider=deepseek-direct model=deepseek-chat tokens=%d', tokens_used)
+            return text, tokens_used, 'deepseek-chat'
+        except Exception as exc:
+            logger.warning('llm_provider_failed provider=deepseek-direct error=%s', exc)
+            errors.append(f'deepseek-direct: {exc}')
 
     raise RuntimeError(f'All LLM providers failed: {"; ".join(errors)}')
 
@@ -135,6 +164,41 @@ async def _stream_with_fallback(
         except Exception as exc:
             logger.warning('llm_stream_failed provider=openrouter model=%s error=%s', model, exc)
             errors.append(f'{model}: {exc}')
+
+    # Last-resort: DeepSeek direct API (bypasses OpenRouter entirely)
+    if settings.DEEPSEEK_DIRECT_API_KEY:
+        try:
+            msgs = (
+                [{'role': 'system', 'content': system_prompt}] if system_prompt else []
+            ) + messages
+            headers = {
+                'Authorization': f'Bearer {settings.DEEPSEEK_DIRECT_API_KEY}',
+                'Content-Type': 'application/json',
+            }
+            body = {'model': 'deepseek-chat', 'messages': msgs, 'max_tokens': max_tokens, 'stream': True}
+
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream('POST', _DEEPSEEK_DIRECT_URL, headers=headers, json=body) as resp:
+                    resp.raise_for_status()
+                    tokens_estimate = 0
+                    async for line in resp.aiter_lines():
+                        if not line.startswith('data: '):
+                            continue
+                        payload = line[6:]
+                        if payload.strip() == '[DONE]':
+                            break
+                        chunk = json.loads(payload)
+                        content = chunk['choices'][0]['delta'].get('content') or ''
+                        if content:
+                            tokens_estimate += len(content) // 4
+                            yield ('token', content, None)
+
+            logger.info('llm_call provider=deepseek-direct model=deepseek-chat tokens=%d', tokens_estimate)
+            yield ('done', 'deepseek-chat', tokens_estimate)
+            return
+        except Exception as exc:
+            logger.warning('llm_provider_failed provider=deepseek-direct error=%s', exc)
+            errors.append(f'deepseek-direct: {exc}')
 
     yield ('error', f'All providers failed: {"; ".join(errors)}', None)
 

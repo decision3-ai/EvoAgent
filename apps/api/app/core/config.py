@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     OPENROUTER_API_KEY: str = ''
     GEMINI_API_KEY: str = ''
+    DEEPSEEK_DIRECT_API_KEY: str = ''
     SERPER_API_KEY: str = ''
 
     JWT_SECRET_KEY: str = 'change-me-in-production'
