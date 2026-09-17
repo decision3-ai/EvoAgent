@@ -185,3 +185,19 @@ export async function submitFeedback(
     { score },
   )
 }
+
+export type AgentFeedbackPayload = {
+  session_id: string
+  user_input: string
+  agent_output: string
+  feedback_type: 'up' | 'down' | 'correction'
+  corrected_output?: string
+}
+
+export async function submitAgentFeedback(
+  token: string,
+  payload: AgentFeedbackPayload,
+): Promise<void> {
+  const api = createApiClient(token)
+  await api.post('/api/v1/feedback/', payload)
+}

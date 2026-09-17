@@ -538,6 +538,10 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
               const isLastAssistant =
                 msg.role === 'assistant' &&
                 messages.slice(i + 1).every((m) => m.role !== 'assistant')
+              const userInput =
+                msg.role === 'assistant'
+                  ? (messages.slice(0, i).reverse().find((m) => m.role === 'user')?.content ?? '')
+                  : ''
               return (
                 <MessageBubble
                   key={msg.id}
@@ -545,6 +549,7 @@ export function ChatInterface({ workspace, sessions: initialSessions, initialMes
                   workspaceId={workspace.id}
                   sessionId={sessionId}
                   isLastAssistant={isLastAssistant}
+                  userInput={userInput}
                 />
               )
             })}

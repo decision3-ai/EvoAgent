@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useNearWallet } from '@/contexts/near-wallet'
-import { submitFeedback, trackEvent } from '@/lib/api-client'
+import { submitFeedback, submitAgentFeedback, trackEvent } from '@/lib/api-client'
 import type { Message } from '@/lib/api-client'
 
 function CopyButton({ text, className = '', onCopy }: { text: string; className?: string; onCopy?: () => void }) {
@@ -187,11 +187,13 @@ export function MessageBubble({
   message,
   workspaceId,
   sessionId,
+  userInput,
   isLastAssistant = false,
 }: {
   message: Message
   workspaceId: string
   sessionId: string
+  userInput: string
   isLastAssistant?: boolean
 }) {
   const isUser = message.role === 'user'
@@ -201,6 +203,11 @@ export function MessageBubble({
   const [feedbackError, setFeedbackError] = useState<string | null>(null)
   const [completed, setCompleted] = useState(false)
   const [completionSubmitting, setCompletionSubmitting] = useState(false)
+  const [correctionOpen, setCorrectionOpen] = useState(false)
+  const [correctionText, setCorrectionText] = useState('')
+  const [correctionSubmitting, setCorrectionSubmitting] = useState(false)
+  const [correctionSaved, setCorrectionSaved] = useState(false)
+  const [correctionError, setCorrectionError] = useState<string | null>(null)
 
   const handleCodeCopy = (codeBlockIndex: number, language: string) => {
     if (!accountId) return
@@ -232,6 +239,27 @@ export function MessageBubble({
       setCompleted(true)
     } finally {
       setCompletionSubmitting(false)
+    }
+  }
+
+  const handleCorrection = async () => {
+    if (!accountId || correctionSubmitting || !correctionText.trim()) return
+    setCorrectionSubmitting(true)
+    setCorrectionError(null)
+    try {
+      await submitAgentFeedback(accountId, {
+        session_id: sessionId,
+        user_input: userInput,
+        agent_output: message.content,
+        feedback_type: 'correction',
+        corrected_output: correctionText,
+      })
+      setCorrectionSaved(true)
+      setCorrectionOpen(false)
+    } catch {
+      setCorrectionError("Couldn't save correction — try again")
+    } finally {
+      setCorrectionSubmitting(false)
     }
   }
 
@@ -338,10 +366,52 @@ export function MessageBubble({
                 {feedbackError && (
                   <span className="text-xs text-red-500">{feedbackError}</span>
                 )}
+                <button
+                  onClick={() => {
+                    setCorrectionText(message.content)
+                    setCorrectionOpen(true)
+                    setCorrectionSaved(false)
+                  }}
+                  className="text-sm px-1.5 py-0.5 rounded transition-all cursor-pointer text-gray-600 hover:text-white"
+                  aria-label="Improve answer"
+                >
+                  ✏️
+                </button>
+                {correctionSaved && (
+                  <span className="text-xs text-green-500">✓ Saved</span>
+                )}
               </div>
             )
           })()}
         </div>
+        {correctionOpen && !isUser && (
+          <div className="mt-2 flex flex-col gap-2">
+            <textarea
+              value={correctionText}
+              onChange={(e) => setCorrectionText(e.target.value)}
+              className="w-full bg-white/5 border border-white/15 rounded-xl px-3 py-2 text-sm text-gray-100 resize-none outline-none focus:border-white/30 transition-colors min-h-[80px]"
+              rows={4}
+            />
+            {correctionError && (
+              <span className="text-xs text-red-500">{correctionError}</span>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleCorrection}
+                disabled={correctionSubmitting || !correctionText.trim()}
+                className="text-xs px-3 py-1.5 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {correctionSubmitting ? 'Saving…' : 'Save correction'}
+              </button>
+              <button
+                onClick={() => setCorrectionOpen(false)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
