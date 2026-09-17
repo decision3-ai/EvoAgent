@@ -222,6 +222,11 @@ evoagent.io/
 
 ## Key Conventions
 
+### Migrations
+- Always run inside the api container: `docker exec agentevo_api_1 sh -c "python -m alembic upgrade head"`
+- The local laptop venv is not fully provisioned for Alembic — never run `alembic` directly on the host.
+- A migration applied locally (dev Docker) is **not** applied on production — when deploying to VPS/Akash, run the same migration again against the production database.
+
 - Python: async/await everywhere, SQLAlchemy async sessions
 - TypeScript: strict mode, no `any`
 - Components: server components by default, `"use client"` only when needed
@@ -248,8 +253,8 @@ cd apps/api && source .venv/bin/activate
 uvicorn app.main:app --reload --port 8000
 
 # Alembic migrations
-docker exec agentevo_api_1 alembic upgrade head
-docker exec agentevo_api_1 alembic revision --autogenerate -m "description"
+docker exec agentevo_api_1 sh -c "python -m alembic upgrade head"
+docker exec agentevo_api_1 sh -c "python -m alembic revision --autogenerate -m 'description'"
 
 # Celery worker (local)
 cd apps/workers && celery -A tasks worker --loglevel=info -Q evolution,fitness,memory,celery
