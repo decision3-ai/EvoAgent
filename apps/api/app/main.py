@@ -18,6 +18,7 @@ from app.auth.near_router import router as near_auth_router
 from app.analytics.router import router as analytics_router
 from app.evosmart.router import router as evosmart_router
 from app.feedback.router import router as feedback_router
+from app.growth.router import router as growth_router
 import app.agents.models  # noqa: F401 — registers models with SQLAlchemy metadata
 import app.workspaces.models  # noqa: F401 — registers Feedback and other workspace models
 import app.auth.models  # noqa: F401 — registers User model
@@ -57,6 +58,7 @@ app.include_router(evolution_router, prefix='/api/v1/evolution', tags=['evolutio
 app.include_router(analytics_router, prefix='/api/v1/events', tags=['analytics'])
 app.include_router(evosmart_router, prefix='/api/v1/evosmart', tags=['evosmart'])
 app.include_router(feedback_router, prefix='/api/v1/feedback', tags=['feedback'])
+app.include_router(growth_router, prefix='/api/v1/growth', tags=['growth'])
 
 
 @app.get('/health', tags=['system'])
