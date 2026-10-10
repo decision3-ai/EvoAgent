@@ -1,21 +1,18 @@
 from fastapi import APIRouter
 from app.growth.schemas import VisibilityRequest, VisibilityReport
-from app.growth.checker import (
-    check_robots,
-    check_llms_txt,
-    check_structured_data,
-    check_content_readable,
-)
+from app.growth.checker import compute_report
 
 router = APIRouter()
 
 
 @router.post('/visibility-check', response_model=VisibilityReport)
 async def visibility_check(payload: VisibilityRequest) -> VisibilityReport:
-    robots = await check_robots(payload.domain)
-    llms = await check_llms_txt(payload.domain)
-    structured = await check_structured_data(payload.domain)
-    content = await check_content_readable(payload.domain)
+    report = await compute_report(payload.domain)
+
+    robots = report['robots']
+    llms = report['llms']
+    structured = report['structured']
+    content = report['content']
 
     return VisibilityReport(
         domain=robots['domain'],
@@ -29,4 +26,8 @@ async def visibility_check(payload: VisibilityRequest) -> VisibilityReport:
         h1=structured['h1'],
         content_readable=content['readable'],
         content_length=content['text_length'],
+        score=report['score'],
+        recommendation_score=report['recommendation_score'],
+        recommendation_reasons=report['recommendation_reasons'],
+        top_3_fixes=report['top_3_fixes'],
     )

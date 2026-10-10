@@ -22,3 +22,7 @@ class VisibilityReport(BaseModel):
     content_length: int
     bots: list[BotStatus]
     ai_blocked_count: int
+    score: int
+    recommendation_score: int
+    recommendation_reasons: list[str]
+    top_3_fixes: list[dict]
