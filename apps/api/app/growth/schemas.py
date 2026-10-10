@@ -18,5 +18,7 @@ class VisibilityReport(BaseModel):
     json_ld: bool
     meta_description: bool
     h1: bool
+    content_readable: bool
+    content_length: int
     bots: list[BotStatus]
     ai_blocked_count: int

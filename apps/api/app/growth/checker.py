@@ -79,3 +79,21 @@ async def check_structured_data(domain: str) -> dict:
         result['h1'] = True
 
     return result
+
+
+async def check_content_readable(domain: str) -> dict:
+    from app.evosmart.tools import jina_read
+
+    domain = domain.replace('https://', '').replace('http://', '').strip('/')
+    url = f'https://{domain}'
+    result = {'domain': domain, 'readable': False, 'text_length': 0}
+
+    try:
+        text = await jina_read(url)
+        length = len((text or '').strip())
+        result['text_length'] = length
+        result['readable'] = length >= 500
+    except Exception:
+        pass
+
+    return result
