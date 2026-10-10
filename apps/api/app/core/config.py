@@ -3,7 +3,7 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env', case_sensitive=True)
+    model_config = SettingsConfigDict(env_file='.env', case_sensitive=True, extra='ignore')
 
     APP_ENV: str = 'development'
     SECRET_KEY: str = 'change-me-in-production'
