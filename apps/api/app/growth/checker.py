@@ -57,3 +57,25 @@ async def check_llms_txt(domain: str) -> dict:
             pass
 
     return {'domain': domain, 'llms_txt': found['llms_txt'], 'llms_full_txt': found['llms_full_txt']}
+
+
+async def check_structured_data(domain: str) -> dict:
+    domain = domain.replace('https://', '').replace('http://', '').strip('/')
+    url = f'https://{domain}'
+    result = {'domain': domain, 'json_ld': False, 'meta_description': False, 'h1': False}
+
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            resp = await client.get(url, headers={'User-Agent': 'Mozilla/5.0 (EvoAgent-VisibilityBot)'})
+            html = resp.text.lower()
+    except Exception:
+        return result
+
+    if 'application/ld+json' in html:
+        result['json_ld'] = True
+    if 'name="description"' in html or "name='description'" in html:
+        result['meta_description'] = True
+    if '<h1' in html:
+        result['h1'] = True
+
+    return result

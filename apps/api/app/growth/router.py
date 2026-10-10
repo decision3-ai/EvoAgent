@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.growth.schemas import VisibilityRequest, VisibilityReport
-from app.growth.checker import check_robots, check_llms_txt
+from app.growth.checker import check_robots, check_llms_txt, check_structured_data
 
 router = APIRouter()
 
@@ -9,6 +9,7 @@ router = APIRouter()
 async def visibility_check(payload: VisibilityRequest) -> VisibilityReport:
     robots = await check_robots(payload.domain)
     llms = await check_llms_txt(payload.domain)
+    structured = await check_structured_data(payload.domain)
 
     return VisibilityReport(
         domain=robots['domain'],
@@ -17,4 +18,7 @@ async def visibility_check(payload: VisibilityRequest) -> VisibilityReport:
         ai_blocked_count=robots['ai_blocked_count'],
         llms_txt=llms['llms_txt'],
         llms_full_txt=llms['llms_full_txt'],
+        json_ld=structured['json_ld'],
+        meta_description=structured['meta_description'],
+        h1=structured['h1'],
     )

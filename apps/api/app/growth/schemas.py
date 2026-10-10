@@ -15,5 +15,8 @@ class VisibilityReport(BaseModel):
     robots_found: bool
     llms_txt: bool
     llms_full_txt: bool
+    json_ld: bool
+    meta_description: bool
+    h1: bool
     bots: list[BotStatus]
     ai_blocked_count: int
