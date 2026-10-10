@@ -41,3 +41,19 @@ async def check_robots(domain: str) -> dict:
             blocked += 1
 
     return {'domain': domain, 'robots_found': True, 'bots': bots, 'ai_blocked_count': blocked}
+
+
+async def check_llms_txt(domain: str) -> dict:
+    domain = domain.replace('https://', '').replace('http://', '').strip('/')
+    found = {'llms_txt': False, 'llms_full_txt': False}
+
+    for key, path in [('llms_txt', '/llms.txt'), ('llms_full_txt', '/llms-full.txt')]:
+        try:
+            async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+                resp = await client.get(f'https://{domain}{path}')
+                if resp.status_code == 200 and len(resp.text.strip()) > 0:
+                    found[key] = True
+        except Exception:
+            pass
+
+    return {'domain': domain, 'llms_txt': found['llms_txt'], 'llms_full_txt': found['llms_full_txt']}

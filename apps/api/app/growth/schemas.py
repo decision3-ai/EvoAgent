@@ -13,5 +13,7 @@ class BotStatus(BaseModel):
 class VisibilityReport(BaseModel):
     domain: str
     robots_found: bool
+    llms_txt: bool
+    llms_full_txt: bool
     bots: list[BotStatus]
     ai_blocked_count: int
