@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     NEAR_NETWORK: str = 'testnet'  # 'testnet' | 'mainnet'
     NEAR_AUTH_RECIPIENT: str = 'evoagent.io'
 
+    EVOSMART_RATE_LIMIT_PER_HOUR: int = 20   # per-IP hourly cap
+    EVOSMART_DAILY_CAP: int = 500            # global daily cap across all users
+
     ALLOWED_ORIGINS: List[str] = [
         'http://localhost:3000',
         'https://evoagent.io',

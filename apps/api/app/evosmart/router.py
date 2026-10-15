@@ -13,12 +13,14 @@ Flow:
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 import google.generativeai as genai
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel
 
 from app.core.config import settings
+from app.core.redis import get_redis
 from app.evosmart.tools import jina_read, serper_search
 
 logger = logging.getLogger(__name__)
@@ -114,8 +116,41 @@ async def _build_research_context(message: str) -> tuple[str, list[dict]]:
     return context, results
 
 
+async def _enforce_rate_limits(request: Request) -> None:
+    """Per-IP hourly limit + global daily cap via Redis INCR/EXPIRE."""
+    forwarded = request.headers.get('X-Forwarded-For')
+    ip = forwarded.split(',')[0].strip() if forwarded else (request.client.host if request.client else 'unknown')
+
+    redis = get_redis()
+
+    # 1. Global daily cap — keyed by UTC date
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    daily_key = f'evosmart:daily:{today}'
+    daily_count = await redis.incr(daily_key)
+    if daily_count == 1:
+        await redis.expire(daily_key, 86400)
+    if daily_count > settings.EVOSMART_DAILY_CAP:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='EvoSmart daily limit reached — try again tomorrow',
+        )
+
+    # 2. Per-IP hourly limit — keyed by IP + hour bucket
+    hour_bucket = int(datetime.now(timezone.utc).timestamp()) // 3600
+    ip_key = f'evosmart:ip:{ip}:{hour_bucket}'
+    ip_count = await redis.incr(ip_key)
+    if ip_count == 1:
+        await redis.expire(ip_key, 3600)
+    if ip_count > settings.EVOSMART_RATE_LIMIT_PER_HOUR:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f'Rate limit exceeded: max {settings.EVOSMART_RATE_LIMIT_PER_HOUR} requests per hour',
+        )
+
+
 @router.post('/chat')
-async def evosmart_chat(body: EvoSmartChatRequest) -> dict:
+async def evosmart_chat(request: Request, body: EvoSmartChatRequest) -> dict:
+    await _enforce_rate_limits(request)
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail='GEMINI_API_KEY not configured')
 
