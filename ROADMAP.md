@@ -1,160 +1,70 @@
-# evoagent.io — Roadmap
+# ROADMAP — EvoAgent
+
+Samo budući plan. Završeno → `CHANGELOG.md`. Tehnički detalji → `ARCHITECTURE.md`. Ideje bez odluke → `IDEAS.md`.
+
+Cilj oktobra 2026: stabilan, siguran proizvod koji agencije (5–50 ljudi) mogu stvarno koristiti.
 
 ---
 
-## V1 — Evolution ✅ COMPLETE
+## 🔴 SAD
 
-User-facing execution: workspace → chat → plan/code/explain.
+### 1. Sigurnost (prije svega ostalog)
 
-- Email/password auth (JWT)
-- Workspace CRUD + agent profile settings
-- Chat with AI (SSE streaming)
-- Session management + smart title generation
-- PLAN / CODE / EXPLANATION response format
-- Feedback collection (thumbs up/down → DB)
-- Code block copy + max-height scroll
-- Production deployment (Vercel + VPS)
+**1a. NEAR Wallet Auth — prava kriptografska provjera** (bivši V4.1)
 
----
+Zamijeniti trenutni nepotpisani NEAR stub u `core/auth.py` pravom verifikacijom.
 
-## V2 — Fitness ✅ COMPLETE
+Backend:
+- `POST /api/v1/auth/near/nonce` — generiše jednokratni nonce (Redis, 5min TTL)
+- `POST /api/v1/auth/near/verify` — provjerava ed25519 potpis, izdaje JWT sa `sub=near:{account_id}`
+- `core/auth.py` — ukloniti nesigurni pass-through; JWT je jedini auth put
+- Bez novih DB tabela — `user_id` već podržava bilo koji string (`near:alice.testnet` ili `email@example.com`)
 
-Background layer: formal scoring, workers, metrics.
+Frontend:
+- `contexts/near-wallet.tsx` — `connectNear()`: nonce → `wallet.signMessage()` → verify → spremi JWT
+- `components/near/connect-wallet-button.tsx` — prikazati NEAR wallet dugme (trenutno skriveno)
 
-- Celery workers + Redis queue
-- `fitness_score` on Message (1.0 thumbs up / -1.0 thumbs down)
-- Analytics event tracking (`analytics_events` table)
-- Maintenance window 00:00–01:00 UTC (`nightly_fitness_beat`, `clear_maintenance_mode`)
-- Async evolution pipeline — `run_evolution` fire-and-forget Celery task
-- Redis status tracking: `evolution_status:{workspace_id}`
+Mreža: prvo testnet (`evoagent.testnet`), jedna promjena configa za mainnet (`evoagent.near`)
 
----
+**1b. EvoSmart zaštita**
+- `POST /api/v1/evosmart/chat` je javan, bez JWT-a — bilo ko troši Gemini kredit
+- Dodati rate limit po IP-u (Redis) i dnevni limit ukupnih poziva
 
-## V2.3 — Champion vs Challenger ✅ COMPLETE
+### 2. Web Search
+- Serper API kao LangGraph alat
+- Agent sam odlučuje kad treba tražiti
 
-A/B testing for agent prompts.
-
-- `challenger_prompt`, `challenger_started_at`, `active_variant` fields on `agent_profiles`
-- 50/50 traffic split per session stored in Redis (TTL 24h): `session_variant:{session_id}`
-- Variant injected into analytics event metadata
-- `evaluate_challenger` Celery beat task at 03:00 UTC
+### 3. Confidence Scoring
+- Agent ocjenjuje svoju sigurnost u odgovor (1–10)
+- Ispod 7 → automatski pokreće Web Search
 
 ---
 
-## V3 — Persistent Memory ✅ COMPLETE
+## 🟡 SLJEDEĆE
 
-Agents remember context across sessions via Mem0 + pgvector.
+### Code Execution
+- Sandbox za izvršavanje koda koji agent napiše
 
-- `agent_memories` table (UUID, workspace_id, memory_type, content, importance_score, embedding vector(1536))
-- `write_session_memories` Celery task — extracts facts/preferences/goals after each chat turn
-- `get_relevant_memories()` — pgvector cosine similarity search, fallback to importance_score ranking
-- `decay_memories` Celery beat task at 02:30 UTC (skips memory_type='goal')
-- OpenAI `text-embedding-3-small` for multilingual embeddings
+### Multi-agent + LangGraph orkestracija (bivši V4.5)
+- Više agenata po workspace-u, delegiranje zadataka
+- LangGraph pipeline za složeno razmišljanje u više koraka
 
----
-
-## V3.5 — EvoSmart + Fallback Chain + EvoPoints + Constitutional ✅ COMPLETE
-
-### EvoSmart
-- New stateless endpoint: `POST /api/v1/evosmart/chat`
-- Direct Gemini 2.5 Flash integration (`google-generativeai`)
-- Javni endpoint — bez JWT auth, history passed by client each request
-- `GEMINI_API_KEY` env var
-
-### Fallback Chain (chat router)
-- Provider chain: OpenRouter (deepseek/deepseek-chat → google/gemini-2.0-flash-001) → Anthropic (claude-sonnet-4-6)
-- `OPENROUTER_API_KEY` env var required for OpenRouter providers
-- Default agent model changed to `deepseek/deepseek-chat`
-- Streaming and non-streaming both use fallback chain
-
-### EvoPoints
-- `evo_points` + `evo_points_updated_at` columns on `workspaces`
-- +20 on workspace create
-- +10 on thumbs up (feedback score=5)
-- +3 on code_copy event (deduplicated per message per day)
-- Exposed in `WorkspaceResponse` schema
-
-### Constitutional Rules (V3.5)
-- `app/evolution/constitutional.py` — `DEFAULT_CONSTITUTIONAL_RULES` + `ANTI_SYCOPHANCY_RULES`
-- Injected at end of every system prompt in chat router
-- Anti-flattery, anti-sycophancy, directness rules
-
-### Code Quality Fixes (2026-05-08)
-- `core/celery.py` — shared Celery client (was duplicated in 2 routers)
-- `core/redis.py` — shared Redis connection pool (was open/close per request)
-- `workspaces/helpers.py` — `_get_owned_workspace` + `_get_session` extracted from router
-- `chat/router.py` — removed duplicate `save_memory` call, fixed payload shadowing
-- `workspaces/router.py` — fixed double workspace query in feedback, `datetime.now(UTC)`
-- `workers/requirements.txt` + `Dockerfile.workers` — added `pgvector`, `memory` queue
+### Analytics Dashboard
+- Performanse agenta, fitness trendovi, istorija EvoPoints
+- Prvi korak upsell puta
 
 ---
 
-## V4 — NEAR + Multi-agent + Walrus/Sui Storage
+## 🔵 KASNIJE
 
-### V4.1 — NEAR Wallet Auth (priority: foundation for everything below)
+### Knowledge Graph
+- Veze između entiteta (ljudi, projekti, firme) u memoriji agenta
 
-Replace the current unsigned NEAR stub in `core/auth.py` with real cryptographic verification.
-
-**Backend:**
-- `POST /api/v1/auth/near/nonce` — generates a one-time nonce (Redis, 5min TTL)
-- `POST /api/v1/auth/near/verify` — verifies ed25519 signature, issues JWT with `sub=near:{account_id}`
-- `core/auth.py` — remove insecure pass-through; JWT is the only auth path
-- No new DB tables — `user_id` already supports any string (`near:alice.testnet` or `email@example.com`)
-
-**Frontend:**
-- `contexts/near-wallet.tsx` — `connectNear()`: nonce → `wallet.signMessage()` → verify → store JWT
-- `components/near/connect-wallet-button.tsx` — expose NEAR wallet button (currently hidden)
-
-**Target network:** testnet first (`evoagent.testnet`), one config swap to mainnet (`evoagent.near`)
+### Agent Marketplace (bivši V4.3)
+- Pregled i pokretanje agenata zajednice
+- Vlasništvo i revenue sharing — blockchain dio je u `IDEAS.md`
 
 ---
 
-### V4.2 — NEAR Smart Contracts
-
-- On-chain agent registry: workspace metadata anchored to NEAR
-- EvoPoints as on-chain tokens (FT standard)
-- Agent evolution events recorded on-chain (immutable audit trail)
-- Contract: `evoagent.near` (Rust, NEAR SDK)
-
----
-
-### V4.3 — Agent Marketplace
-
-- Browse and deploy community agents
-- Agent ownership tied to NEAR account
-- Revenue sharing via smart contract
-
----
-
-### V4.4 — Walrus/Sui Decentralized Storage
-
-- Agent memory and session data stored on Walrus (Sui-based decentralized storage)
-- User owns their data — stored under their NEAR/Sui key, not on our VPS
-- Fallback: keep PostgreSQL for hot/recent data, Walrus for long-term memory archive
-
----
-
-### V4.5 — Multi-agent + LangGraph Orchestration
-
-- Multiple agents per workspace, task delegation
-- LangGraph pipeline for complex multi-step reasoning
-- Analytics dashboard (agent performance, fitness trends, EvoPoints history)
-
----
-
-## Nightly Schedule (Celery Beat)
-
-| Time (UTC) | Task | Description |
-|------------|------|-------------|
-| **00:00** | `nightly_fitness_beat` | Maintenance window starts |
-| **01:00** | `clear_maintenance_mode` | End maintenance window |
-| **02:30** | `decay_memories` | Memory decay (skips goals) |
-| **03:00** | `evaluate_challenger` | Champion vs Challenger evaluation |
-
----
-
-## Architecture Notes
-
-- Core never imports from Plugin. Plugin reads Core tables.
-- `workers/` is Plugin layer — `api/` is Core layer.
-- Celery client in Core dispatches tasks by name only (`send_task`), no worker code imported.
+## Pravilo
+Kad ideja iz `IDEAS.md` dobije 🟢, ulazi ovdje. Kad stavka bude gotova, seli se u `CHANGELOG.md`.

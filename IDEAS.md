@@ -27,12 +27,24 @@ Pravilo: nova ideja ide ovdje ODMAH, makar u jednoj rečenici. Status se mijenja
 |---|---|---|
 | Web Search (Serper + LangGraph) | 🟢 | Prioritet 1 na roadmapu. |
 | Confidence Scoring (1–10) | 🟢 | Ispod 7 automatski pokreće pretragu. |
-| Code Execution (sandbox) | 🟡 | Prioritet 3. |
-| Knowledge Graph | 🟡 | Veze između entiteta. |
-| Upsell: Analytics → Marketplace → Connectors → White-label | 🔵 | Put rasta prihoda. |
+| Code Execution (sandbox) | 🟢 | U ROADMAP-u (SLJEDEĆE). |
+| Knowledge Graph | 🟢 | U ROADMAP-u (KASNIJE). |
+| Upsell: Analytics → Marketplace → Connectors → White-label | 🔵 | Put rasta prihoda. Analytics i Marketplace su u ROADMAP-u. |
 | GEO/AEO (citiranje u ChatGPT/Claude/Perplexity) | 🟡 | 3 koraka čekaju: `llms.txt`, JSON-LD schema, provjera robots.txt/Cloudflare. |
 | Self-hosted modeli na Akash (Qwen3.6-27B) | 🟡 | Pauzirano zbog cijene GPU-a; sada Claude preko OpenRoutera. |
 | Browser agent (Kimi WebBridge koncept) | 🔍 | Agent koristi korisnikov ulogovani browser. Za V4 / EvoCare. |
+
+## EvoAgent — blockchain sloj (izvučeno iz starog ROADMAP V4)
+
+| Ideja | Status | Kratko |
+|---|---|---|
+| **NEAR smart ugovori** (bivši V4.2) | 🟡 | On-chain registar agenata (workspace metadata na NEAR-u). Ugovor `evoagent.near` (Rust, NEAR SDK). |
+| **EvoPoints kao on-chain token** (bivši V4.2) | 🟡 | EvoPoints kao NEAR FT standard token. |
+| **Evolution audit trail** (bivši V4.2) | 🟡 | Evolution događaji zapisani on-chain, nepromjenjivo. |
+| **Marketplace na blockchainu** (bivši V4.3) | 🟡 | Vlasništvo agenta vezano za NEAR nalog, revenue sharing preko smart ugovora. |
+| **Walrus/Sui storage** (bivši V4.4) | 🟡 | Memorija i sesije na Walrusu, pod korisnikovim NEAR/Sui ključem. PostgreSQL za svježe podatke, Walrus za dugoročnu arhivu. |
+
+Uslov za 🟢: plaćeni korisnici koji to stvarno traže.
 
 ## Biznis / infrastruktura
 
