@@ -120,6 +120,13 @@ async def near_verify(req: NearVerifyRequest) -> NearTokenResponse:
             detail='Invalid or expired nonce',
         )
 
+    # 1b. Reject if recipient doesn't match our expected domain
+    if req.recipient != settings.NEAR_AUTH_RECIPIENT:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid recipient',
+        )
+
     # 2. Verify the public key belongs to the claimed account via NEAR RPC
     rpc_url = _NEAR_RPC.get(settings.NEAR_NETWORK, _NEAR_RPC['testnet'])
     try:
@@ -136,7 +143,10 @@ async def near_verify(req: NearVerifyRequest) -> NearTokenResponse:
             })
         rpc_data = resp.json()
         keys = rpc_data.get('result', {}).get('keys', [])
-        known_keys = {k['public_key'] for k in keys}
+        known_keys = {
+            k['public_key'] for k in keys
+            if k['access_key']['permission'] == 'FullAccess'
+        }
     except Exception as exc:
         logger.error('NEAR RPC unavailable: %s', exc)
         raise HTTPException(
@@ -179,6 +189,13 @@ async def near_verify(req: NearVerifyRequest) -> NearTokenResponse:
 
     try:
         pub_key = Ed25519PublicKey.from_public_bytes(key_bytes)
+    except (ValueError, Exception):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Invalid public key',
+        )
+
+    try:
         pub_key.verify(sig_bytes, digest)
     except InvalidSignature:
         raise HTTPException(

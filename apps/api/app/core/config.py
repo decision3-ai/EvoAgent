@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     D3RCP_BRIDGE_URL: str = ''
 
     NEAR_NETWORK: str = 'testnet'  # 'testnet' | 'mainnet'
+    NEAR_AUTH_RECIPIENT: str = 'evoagent.io'
 
     ALLOWED_ORIGINS: List[str] = [
         'http://localhost:3000',
