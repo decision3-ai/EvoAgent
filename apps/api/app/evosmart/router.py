@@ -118,17 +118,23 @@ async def _build_research_context(message: str) -> tuple[str, list[dict]]:
 
 async def _enforce_rate_limits(request: Request) -> None:
     """Per-IP hourly limit + global daily cap via Redis INCR/EXPIRE."""
+    # Use the rightmost X-Forwarded-For entry — appended by our nginx proxy,
+    # not client-controlled. Leftmost is spoofable.
     forwarded = request.headers.get('X-Forwarded-For')
-    ip = forwarded.split(',')[0].strip() if forwarded else (request.client.host if request.client else 'unknown')
+    if forwarded:
+        ip = forwarded.split(',')[-1].strip()
+    else:
+        ip = request.client.host if request.client else 'unknown'
 
     redis = get_redis()
 
     # 1. Global daily cap — keyed by UTC date
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
     daily_key = f'evosmart:daily:{today}'
-    daily_count = await redis.incr(daily_key)
-    if daily_count == 1:
-        await redis.expire(daily_key, 86400)
+    async with redis.pipeline(transaction=True) as pipe:
+        await pipe.incr(daily_key)
+        await pipe.expire(daily_key, 86400)
+        daily_count, _ = await pipe.execute()
     if daily_count > settings.EVOSMART_DAILY_CAP:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -138,9 +144,10 @@ async def _enforce_rate_limits(request: Request) -> None:
     # 2. Per-IP hourly limit — keyed by IP + hour bucket
     hour_bucket = int(datetime.now(timezone.utc).timestamp()) // 3600
     ip_key = f'evosmart:ip:{ip}:{hour_bucket}'
-    ip_count = await redis.incr(ip_key)
-    if ip_count == 1:
-        await redis.expire(ip_key, 3600)
+    async with redis.pipeline(transaction=True) as pipe:
+        await pipe.incr(ip_key)
+        await pipe.expire(ip_key, 3600)
+        ip_count, _ = await pipe.execute()
     if ip_count > settings.EVOSMART_RATE_LIMIT_PER_HOUR:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
