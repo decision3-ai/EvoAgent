@@ -13,10 +13,11 @@ Flow:
 
 import asyncio
 import logging
+from typing import Annotated
 
 import google.generativeai as genai
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 from app.core.config import settings
 from app.core.rate_limit import enforce_rate_limits
@@ -28,6 +29,7 @@ router = APIRouter()
 _GEMINI_MODEL = 'gemini-2.5-flash'
 _TIMEOUT_SECONDS = 120
 _RESEARCH_SOURCES = 3
+_MAX_MESSAGE_CHARS = 2000  # public endpoint — every character costs Gemini tokens
 
 # Configure once at module load
 if settings.GEMINI_API_KEY:
@@ -55,7 +57,9 @@ class HistoryMessage(BaseModel):
 
 
 class EvoSmartChatRequest(BaseModel):
-    message: str
+    message: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=_MAX_MESSAGE_CHARS)
+    ]
     history: list[HistoryMessage] = []
 
 
