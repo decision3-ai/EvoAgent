@@ -4,6 +4,8 @@ import logging
 
 import httpx
 
+from app.growth.url_guard import safe_get
+
 logger = logging.getLogger(__name__)
 
 AI_BOTS = ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended', 'CCBot']
@@ -30,8 +32,8 @@ async def check_robots(domain: str) -> dict:
     url = f'https://{domain}/robots.txt'
 
     try:
-        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-            resp = await client.get(url)
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await safe_get(client, url)
             if resp.status_code != 200:
                 return {'domain': domain, 'robots_found': False,
                         'bots': [{'bot': b, 'allowed': True} for b in AI_BOTS],
@@ -71,8 +73,8 @@ async def check_llms_txt(domain: str) -> dict:
 
     for key, path in [('llms_txt', '/llms.txt'), ('llms_full_txt', '/llms-full.txt')]:
         try:
-            async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-                resp = await client.get(f'https://{domain}{path}')
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await safe_get(client, f'https://{domain}{path}')
                 if resp.status_code == 200 and len(resp.text.strip()) > 0:
                     found[key] = True
         except Exception:
@@ -87,8 +89,8 @@ async def check_structured_data(domain: str) -> dict:
     result = {'domain': domain, 'json_ld': False, 'meta_description': False, 'h1': False}
 
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            resp = await client.get(url, headers={'User-Agent': 'Mozilla/5.0 (EvoAgent-VisibilityBot)'})
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await safe_get(client, url, headers={'User-Agent': 'Mozilla/5.0 (EvoAgent-VisibilityBot)'})
             html = resp.text.lower()
     except Exception:
         return result

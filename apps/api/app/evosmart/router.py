@@ -13,14 +13,13 @@ Flow:
 
 import asyncio
 import logging
-from datetime import datetime, timezone
 
 import google.generativeai as genai
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.core.config import settings
-from app.core.redis import get_redis
+from app.core.rate_limit import enforce_rate_limits
 from app.evosmart.tools import jina_read, serper_search
 
 logger = logging.getLogger(__name__)
@@ -116,48 +115,15 @@ async def _build_research_context(message: str) -> tuple[str, list[dict]]:
     return context, results
 
 
-async def _enforce_rate_limits(request: Request) -> None:
-    """Per-IP hourly limit + global daily cap via Redis INCR/EXPIRE."""
-    # Use the rightmost X-Forwarded-For entry — appended by our nginx proxy,
-    # not client-controlled. Leftmost is spoofable.
-    forwarded = request.headers.get('X-Forwarded-For')
-    if forwarded:
-        ip = forwarded.split(',')[-1].strip()
-    else:
-        ip = request.client.host if request.client else 'unknown'
-
-    redis = get_redis()
-
-    # 1. Global daily cap — keyed by UTC date
-    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    daily_key = f'evosmart:daily:{today}'
-    async with redis.pipeline(transaction=True) as pipe:
-        await pipe.incr(daily_key)
-        await pipe.expire(daily_key, 86400)
-        daily_count, _ = await pipe.execute()
-    if daily_count > settings.EVOSMART_DAILY_CAP:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail='EvoSmart daily limit reached — try again tomorrow',
-        )
-
-    # 2. Per-IP hourly limit — keyed by IP + hour bucket
-    hour_bucket = int(datetime.now(timezone.utc).timestamp()) // 3600
-    ip_key = f'evosmart:ip:{ip}:{hour_bucket}'
-    async with redis.pipeline(transaction=True) as pipe:
-        await pipe.incr(ip_key)
-        await pipe.expire(ip_key, 3600)
-        ip_count, _ = await pipe.execute()
-    if ip_count > settings.EVOSMART_RATE_LIMIT_PER_HOUR:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f'Rate limit exceeded: max {settings.EVOSMART_RATE_LIMIT_PER_HOUR} requests per hour',
-        )
-
-
 @router.post('/chat')
 async def evosmart_chat(request: Request, body: EvoSmartChatRequest) -> dict:
-    await _enforce_rate_limits(request)
+    await enforce_rate_limits(
+        request,
+        prefix='evosmart',
+        per_hour=settings.EVOSMART_RATE_LIMIT_PER_HOUR,
+        daily_cap=settings.EVOSMART_DAILY_CAP,
+        daily_detail='EvoSmart daily limit reached — try again tomorrow',
+    )
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail='GEMINI_API_KEY not configured')
 

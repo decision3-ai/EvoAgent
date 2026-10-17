@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     EVOSMART_RATE_LIMIT_PER_HOUR: int = 20   # per-IP hourly cap
     EVOSMART_DAILY_CAP: int = 500            # global daily cap across all users
 
+    GROWTH_CHECK_LIMIT_PER_HOUR: int = 5     # per-IP hourly cap for visibility checks
+    GROWTH_DAILY_CAP: int = 200              # global daily cap across all users
+
     ALLOWED_ORIGINS: List[str] = [
         'http://localhost:3000',
         'https://evoagent.io',

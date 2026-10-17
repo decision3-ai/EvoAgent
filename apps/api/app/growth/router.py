@@ -1,13 +1,30 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request, status
+from app.core.config import settings
+from app.core.rate_limit import enforce_rate_limits
 from app.growth.schemas import VisibilityRequest, VisibilityReport
 from app.growth.checker import compute_report
+from app.growth.url_guard import UnsafeDomainError, validate_domain
 
 router = APIRouter()
 
 
 @router.post('/visibility-check', response_model=VisibilityReport)
-async def visibility_check(payload: VisibilityRequest) -> VisibilityReport:
-    report = await compute_report(payload.domain)
+async def visibility_check(request: Request, payload: VisibilityRequest) -> VisibilityReport:
+    await enforce_rate_limits(
+        request,
+        prefix='growth',
+        per_hour=settings.GROWTH_CHECK_LIMIT_PER_HOUR,
+        daily_cap=settings.GROWTH_DAILY_CAP,
+        daily_detail='Visibility check daily limit reached — try again tomorrow',
+    )
+
+    # SSRF guard — must pass before any outbound request (fetches, Jina, Serper, OpenRouter)
+    try:
+        domain = await validate_domain(payload.domain)
+    except UnsafeDomainError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    report = await compute_report(domain)
 
     robots = report['robots']
     llms = report['llms']
