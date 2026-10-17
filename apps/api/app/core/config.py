@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     GROWTH_CHECK_LIMIT_PER_HOUR: int = 5     # per-IP hourly cap for visibility checks
     GROWTH_DAILY_CAP: int = 200              # global daily cap across all users
+    GROWTH_MAX_RESPONSE_BYTES: int = 2 * 1024 * 1024  # body read cap per fetched page
 
     ALLOWED_ORIGINS: List[str] = [
         'http://localhost:3000',

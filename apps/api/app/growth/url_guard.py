@@ -2,7 +2,8 @@
 SSRF guard for the public visibility check.
 
 validate_domain   — syntactic check + DNS resolution; every resolved address must be public
-safe_get          — GET without automatic redirects; each redirect target is re-validated
+safe_get          — GET pinned to the validated IP (no DNS rebinding), manual redirects
+                    with each hop re-validated, body capped, total time capped
 """
 
 import asyncio
@@ -12,8 +13,13 @@ import socket
 
 import httpx
 
+from app.core.config import settings
+
 _DNS_TIMEOUT_SECONDS = 5
+_TOTAL_TIMEOUT_SECONDS = 15  # per safe_get call, including all redirects
 _MAX_REDIRECTS = 5
+# Dropped when re-wrapping a streamed body: it is already decoded and possibly truncated
+_STALE_BODY_HEADERS = ('content-encoding', 'content-length', 'transfer-encoding')
 _LABEL_RE = re.compile(r'^(?!-)[a-z0-9-]{1,63}(?<!-)$')
 _TLD_RE = re.compile(r'^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$')
 
@@ -74,24 +80,36 @@ def _is_public_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     )
 
 
-async def _resolve_public(host: str) -> None:
-    """Resolve host via DNS; raise if it does not resolve or ANY address is non-public."""
+async def _getaddrinfo(host: str) -> list[tuple]:
     loop = asyncio.get_running_loop()
+    return await asyncio.wait_for(
+        loop.getaddrinfo(host, None, type=socket.SOCK_STREAM),
+        timeout=_DNS_TIMEOUT_SECONDS,
+    )
+
+
+async def _resolve_public(host: str) -> str:
+    """
+    Resolve host via DNS; raise if it does not resolve or ANY address is non-public.
+    Returns one validated address for the caller to connect to — IPv4 preferred,
+    since our hosting may not have IPv6 connectivity.
+    """
     try:
-        infos = await asyncio.wait_for(
-            loop.getaddrinfo(host, None, type=socket.SOCK_STREAM),
-            timeout=_DNS_TIMEOUT_SECONDS,
-        )
+        infos = await _getaddrinfo(host)
     except (socket.gaierror, asyncio.TimeoutError, UnicodeError):
         raise UnsafeDomainError(f'Domain {host} could not be resolved.')
 
     if not infos:
         raise UnsafeDomainError(f'Domain {host} could not be resolved.')
 
+    addresses = []
     for *_, sockaddr in infos:
         ip = ipaddress.ip_address(sockaddr[0].split('%', 1)[0])  # drop IPv6 scope id
         if not _is_public_ip(ip):
             raise UnsafeDomainError(f'Domain {host} resolves to a non-public address.')
+        addresses.append(ip)
+    preferred = next((ip for ip in addresses if ip.version == 4), addresses[0])
+    return str(preferred)
 
 
 async def validate_domain(raw: str) -> str:
@@ -112,8 +130,11 @@ async def validate_domain(raw: str) -> str:
     return host
 
 
-async def validate_url(url: str) -> None:
-    """Validate a full URL (e.g. a redirect target): http(s), default port, public host."""
+async def validate_url(url: str) -> tuple[httpx.URL, str]:
+    """
+    Validate a full URL (e.g. a redirect target): http(s), default port, public host.
+    Returns (URL with normalized host, validated IP to connect to).
+    """
     try:
         parsed = httpx.URL(url)
     except Exception:
@@ -125,15 +146,53 @@ async def validate_url(url: str) -> None:
     if parsed.userinfo:
         raise UnsafeDomainError('Credentials in URLs are not allowed.')
     host = _check_hostname(parsed.host)
-    await _resolve_public(host)
+    ip = await _resolve_public(host)
+    return parsed.copy_with(host=host), ip
 
 
-async def safe_get(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
-    """GET with manual redirect handling — every hop is re-validated before it is requested."""
-    for _ in range(_MAX_REDIRECTS + 1):
-        await validate_url(url)
-        resp = await client.get(url, follow_redirects=False, **kwargs)
-        if not resp.is_redirect:
-            return resp
-        url = str(resp.url.join(resp.headers['location']))
-    raise UnsafeDomainError('Too many redirects.')
+async def _read_capped(resp: httpx.Response) -> bytes:
+    """Read the decoded body, stopping once GROWTH_MAX_RESPONSE_BYTES have been read."""
+    limit = settings.GROWTH_MAX_RESPONSE_BYTES
+    body = bytearray()
+    async for chunk in resp.aiter_bytes():
+        body += chunk
+        if len(body) >= limit:
+            break
+    return bytes(body[:limit])
+
+
+async def safe_get(
+    client: httpx.AsyncClient, url: str, *, headers: dict[str, str] | None = None
+) -> httpx.Response:
+    """
+    GET with SSRF protections:
+      - DNS is resolved once per hop and the connection is pinned to the validated IP;
+        Host header and TLS SNI/certificate verification still use the original hostname
+      - redirects are followed manually, each hop re-validated
+      - body is truncated at GROWTH_MAX_RESPONSE_BYTES
+      - the whole call, redirects included, is capped at _TOTAL_TIMEOUT_SECONDS (TimeoutError)
+    """
+    async with asyncio.timeout(_TOTAL_TIMEOUT_SECONDS):
+        for _ in range(_MAX_REDIRECTS + 1):
+            target, ip = await validate_url(url)
+            async with client.stream(
+                'GET',
+                target.copy_with(host=ip),
+                headers={**(headers or {}), 'Host': target.host},
+                follow_redirects=False,
+                extensions={'sni_hostname': target.host},
+            ) as resp:
+                if resp.is_redirect:
+                    url = str(target.join(resp.headers['location']))
+                    continue
+                body = await _read_capped(resp)
+                return httpx.Response(
+                    resp.status_code,
+                    headers=[
+                        (k, v) for k, v in resp.headers.multi_items()
+                        if k.lower() not in _STALE_BODY_HEADERS
+                    ],
+                    content=body,
+                    request=httpx.Request('GET', target),
+                )
+        raise UnsafeDomainError('Too many redirects.')
