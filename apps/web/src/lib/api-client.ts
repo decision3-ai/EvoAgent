@@ -201,3 +201,69 @@ export async function submitAgentFeedback(
   const api = createApiClient(token)
   await api.post('/api/v1/feedback/', payload)
 }
+
+// ─── Public: AI Visibility Checker ────────────────────────────────────────────
+
+export type VisibilityBotStatus = {
+  bot: string
+  allowed: boolean
+}
+
+export type VisibilityFix = {
+  issue: string
+  fix: string
+}
+
+export type VisibilityReport = {
+  domain: string
+  robots_found: boolean
+  llms_txt: boolean
+  llms_full_txt: boolean
+  json_ld: boolean
+  meta_description: boolean
+  h1: boolean
+  content_readable: boolean
+  content_length: number
+  bots: VisibilityBotStatus[]
+  ai_blocked_count: number
+  score: number
+  recommendation_score: number
+  recommendation_reasons: string[]
+  top_3_fixes: VisibilityFix[]
+}
+
+export class VisibilityCheckError extends Error {
+  constructor(
+    message: string,
+    public status: number | null,
+  ) {
+    super(message)
+  }
+}
+
+/** Public endpoint — no auth. status=null means the request never got a response. */
+export async function checkVisibility(domain: string): Promise<VisibilityReport> {
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}/api/v1/growth/visibility-check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain }),
+      signal: AbortSignal.timeout(90_000),
+    })
+  } catch {
+    throw new VisibilityCheckError('Network error', null)
+  }
+
+  if (!res.ok) {
+    let detail = ''
+    try {
+      const body = (await res.json()) as { detail?: unknown }
+      if (typeof body.detail === 'string') detail = body.detail
+    } catch {
+      // non-JSON error body
+    }
+    throw new VisibilityCheckError(detail, res.status)
+  }
+  return (await res.json()) as VisibilityReport
+}
