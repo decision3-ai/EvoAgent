@@ -129,10 +129,10 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
     // If void: browser wallet (MyNearWallet) is redirecting — handled in callback effect below
   }
 
-  // ── Init wallet selector (skip on landing page) ───────────────────────────
+  // ── Init wallet selector (skip on public pages) ───────────────────────────
 
   useEffect(() => {
-    if (pathname === '/' || walletInitialized) {
+    if (pathname === '/' || pathname === '/ai-visibility' || walletInitialized) {
       setIsLoading(false)
       return
     }
