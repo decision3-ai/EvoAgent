@@ -3,7 +3,7 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env', case_sensitive=True)
+    model_config = SettingsConfigDict(env_file='.env', case_sensitive=True, extra='ignore')
 
     APP_ENV: str = 'development'
     SECRET_KEY: str = 'change-me-in-production'
@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     D3RCP_BRIDGE_URL: str = ''
 
     NEAR_NETWORK: str = 'testnet'  # 'testnet' | 'mainnet'
+    NEAR_AUTH_RECIPIENT: str = 'evoagent.io'
+
+    EVOSMART_RATE_LIMIT_PER_HOUR: int = 20   # per-IP hourly cap
+    EVOSMART_DAILY_CAP: int = 500            # global daily cap across all users
+
+    GROWTH_CHECK_LIMIT_PER_HOUR: int = 5     # per-IP hourly cap for visibility checks
+    GROWTH_DAILY_CAP: int = 200              # global daily cap across all users
+    GROWTH_MAX_RESPONSE_BYTES: int = 2 * 1024 * 1024  # body read cap per fetched page
 
     ALLOWED_ORIGINS: List[str] = [
         'http://localhost:3000',

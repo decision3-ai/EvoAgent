@@ -13,12 +13,14 @@ Flow:
 
 import asyncio
 import logging
+from typing import Annotated
 
 import google.generativeai as genai
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, StringConstraints, field_validator
 
 from app.core.config import settings
+from app.core.rate_limit import enforce_rate_limits
 from app.evosmart.tools import jina_read, serper_search
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,8 @@ router = APIRouter()
 _GEMINI_MODEL = 'gemini-2.5-flash'
 _TIMEOUT_SECONDS = 120
 _RESEARCH_SOURCES = 3
+_MAX_MESSAGE_CHARS = 2000  # public endpoint — every character costs Gemini tokens
+_MAX_HISTORY_MESSAGES = 20  # older turns are dropped, not rejected
 
 # Configure once at module load
 if settings.GEMINI_API_KEY:
@@ -52,10 +56,26 @@ class HistoryMessage(BaseModel):
     role: str   # 'user' or 'model'
     content: str
 
+    @field_validator('content')
+    @classmethod
+    def _truncate_content(cls, content: str) -> str:
+        # Truncate rather than reject: model replies echoed back by the client often exceed the cap
+        return content[:_MAX_MESSAGE_CHARS]
+
 
 class EvoSmartChatRequest(BaseModel):
-    message: str
+    message: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=_MAX_MESSAGE_CHARS)
+    ]
     history: list[HistoryMessage] = []
+
+    @field_validator('history', mode='before')
+    @classmethod
+    def _keep_recent_history(cls, history: object) -> object:
+        # Runs before item validation, so dropped turns are never parsed
+        if isinstance(history, list):
+            return history[-_MAX_HISTORY_MESSAGES:]
+        return history
 
 
 def _build_history(history: list[HistoryMessage]) -> list[dict]:
@@ -115,7 +135,14 @@ async def _build_research_context(message: str) -> tuple[str, list[dict]]:
 
 
 @router.post('/chat')
-async def evosmart_chat(body: EvoSmartChatRequest) -> dict:
+async def evosmart_chat(request: Request, body: EvoSmartChatRequest) -> dict:
+    await enforce_rate_limits(
+        request,
+        prefix='evosmart',
+        per_hour=settings.EVOSMART_RATE_LIMIT_PER_HOUR,
+        daily_cap=settings.EVOSMART_DAILY_CAP,
+        daily_detail='EvoSmart daily limit reached — try again tomorrow',
+    )
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail='GEMINI_API_KEY not configured')
 

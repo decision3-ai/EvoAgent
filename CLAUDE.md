@@ -385,3 +385,6 @@ cd apps/workers && celery -A tasks beat --loglevel=info
 - List exactly which files changed
 - Tell Victor if a migration is needed
 - Tell Victor if a frontend redeploy is needed (push to GitHub)
+
+## Ideje
+Sve ideje i njihov status su u IDEAS.md. Čitaj ga kad se priča o novim idejama ili prioritetima. Konkretan plan je u ROADMAP.md.
