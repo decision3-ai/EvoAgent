@@ -47,8 +47,10 @@ async def _call_with_fallback(
     messages: list[dict],
     system_prompt: str,
     max_tokens: int,
+    temperature: float | None = None,
 ) -> tuple[str, int, str]:
     """Try each provider in order. Returns (text, tokens_used, model_used)."""
+    sampling = {'temperature': temperature} if temperature is not None else {}
     if not settings.OPENROUTER_API_KEY:
         raise RuntimeError('OPENROUTER_API_KEY is not set — all LLM calls go through OpenRouter')
 
@@ -65,7 +67,7 @@ async def _call_with_fallback(
                         'Authorization': f'Bearer {settings.OPENROUTER_API_KEY}',
                         'Content-Type': 'application/json',
                     },
-                    json={'model': model, 'messages': msgs, 'max_tokens': max_tokens},
+                    json={'model': model, 'messages': msgs, 'max_tokens': max_tokens, **sampling},
                 )
                 resp.raise_for_status()
                 data = resp.json()
@@ -95,7 +97,7 @@ async def _call_with_fallback(
                         'Authorization': f'Bearer {settings.DEEPSEEK_DIRECT_API_KEY}',
                         'Content-Type': 'application/json',
                     },
-                    json={'model': 'deepseek-chat', 'messages': msgs, 'max_tokens': max_tokens},
+                    json={'model': 'deepseek-chat', 'messages': msgs, 'max_tokens': max_tokens, **sampling},
                 )
                 resp.raise_for_status()
                 data = resp.json()
